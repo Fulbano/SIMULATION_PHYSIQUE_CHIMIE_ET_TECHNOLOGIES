@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratoire Virtuel — Cinématique & Engrenages</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4f1e8;
+    --paper-line:#ded7c2;
+    --ink:#1c2541;
+    --ink-soft:#5b6584;
+    --panel:#fffdf7;
+    --rule:#d9d2bd;
+    --cyan:#22a7a0;
+    --amber:#d98e2c;
+    --coral:#c65b5b;
+    --mint:#2f9e6e;
+    --scope-bg:#0b1220;
+    --scope-grid:#1c2b45;
+    --scope-text:#dfe8f5;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:32px 20px 60px;
+    font-family:'Inter',sans-serif; color:var(--ink);
+    background:
+      linear-gradient(var(--paper-line) 1px, transparent 1px) 0 0/100% 28px,
+      var(--paper);
+    display:flex; flex-direction:column; align-items:center;
+  }
+
+  .masthead{ max-width:1080px; width:100%; margin-bottom:26px; border-bottom:2px solid var(--ink); padding-bottom:14px; }
+  .masthead .kicker{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.04em; color:var(--ink-soft); margin-bottom:6px; }
+  h1{ font-family:'Fraunces',serif; font-weight:600; font-size:2.05rem; margin:0 0 4px; }
+  .subtitle{ color:var(--ink-soft); font-size:1rem; max-width:660px; }
+
+  .container{ max-width:1080px; width:100%; margin-bottom:22px; }
+  .panel{ background:var(--panel); border:1px solid var(--rule); border-radius:6px; padding:24px; }
+
+  h2.panel-title{ font-family:'Fraunces',serif; font-weight:600; font-size:1.2rem; margin:0 0 8px; }
+  .panel-desc{ color:var(--ink-soft); font-size:0.92rem; margin:0 0 18px; padding-bottom:14px; border-bottom:2px solid var(--rule); }
+  h3.sub-title{ font-family:'Fraunces',serif; font-weight:600; font-size:0.98rem; margin:0 0 10px; color:var(--ink); }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  @media(max-width:768px){ .grid-2{ grid-template-columns:1fr; } }
+
+  .formula-card{ border-left:3px solid var(--cyan); padding:8px 0 8px 14px; margin-bottom:12px; }
+  .formula-card h4{ margin:0 0 4px; font-size:0.82rem; font-weight:600; color:var(--ink-soft); font-family:'Inter',sans-serif; }
+  .formula-render{ font-size:1.0rem; }
+
+  .input-group{ display:flex; flex-direction:column; margin-bottom:14px; }
+  .input-group label{ font-size:0.85rem; font-weight:600; color:var(--ink-soft); margin-bottom:6px; }
+  input[type="number"]{ padding:9px 10px; border-radius:4px; border:1px solid var(--rule); font-size:0.92rem; background:var(--paper); color:var(--ink); font-family:'IBM Plex Mono',monospace; }
+
+  button.action{
+    border:1px solid var(--ink); background:var(--ink); color:var(--panel);
+    padding:9px 14px; border-radius:4px; font-family:'Inter',sans-serif; font-weight:600;
+    font-size:0.86rem; cursor:pointer; width:100%; margin-top:4px; transition:opacity .15s;
+  }
+  button.action:hover{ opacity:0.85; }
+  button.action.secondary{ background:var(--panel); color:var(--ink); margin-top:8px; }
+
+  .readout{
+    font-family:'IBM Plex Mono',monospace; font-size:0.85rem; line-height:1.85;
+    background:var(--scope-bg); color:var(--scope-text); border-radius:6px; padding:14px 18px; margin-top:14px;
+  }
+  .readout .rline{ display:flex; justify-content:space-between; gap:14px; }
+  .readout .rlabel{ color:#8fa3c4; }
+  .readout .rval{ font-weight:600; }
+  .readout .rgroup{ margin-top:8px; padding-top:8px; border-top:1px dashed #33456b; }
+  .readout .rgroup:first-child{ margin-top:0; padding-top:0; border-top:none; }
+
+  .canvas-container{ position:relative; background:var(--scope-bg); border-radius:6px; overflow:hidden; margin-top:16px; width:100%; }
+  canvas{ display:block; width:100%; }
+  #kinematicsCanvas{ height:150px; }
+  #gearCanvas{ aspect-ratio:900/250; height:auto; }
+</style>
+</head>
+<body>
+
+  <div class="masthead">
+    <div class="kicker">PHYSIQUE-TECHNOLOGIE — TRAVAUX PRATIQUES</div>
+    <h1>Module de physique-technologie</h1>
+    <div class="subtitle">Cinématique du point & étude dynamique des engrenages et liaisons mécaniques.</div>
+  </div>
+
+  <!-- SECTION 1 : CINÉMATIQUE -->
+  <div class="container">
+    <div class="panel">
+      <h2 class="panel-title">1 · Cours & simulation — cinématique du point</h2>
+      <div class="panel-desc">Étude du mouvement rectiligne uniformément varié (MRUV) et des lois horaires fondamentales.</div>
+
+      <div class="grid-2">
+        <div>
+          <h3 class="sub-title">Formules à connaître</h3>
+          <div class="formula-card"><h4>Vitesse instantanée</h4><div class="formula-render" id="fk1"></div></div>
+          <div class="formula-card"><h4>Position — loi horaire (MRUV)</h4><div class="formula-render" id="fk2"></div></div>
+          <div class="formula-card"><h4>Indépendance du temps (Torricelli)</h4><div class="formula-render" id="fk3"></div></div>
+        </div>
+        <div>
+          <h3 class="sub-title">Paramètres de simulation (MRUA)</h3>
+          <div class="input-group">
+            <label for="accel">Accélération <span id="katexA"></span> (m/s²)</label>
+            <input type="number" id="accel" value="2" step="0.5">
+          </div>
+          <div class="input-group">
+            <label for="vInit">Vitesse initiale <span id="katexV0"></span> (m/s)</label>
+            <input type="number" id="vInit" value="0" step="1">
+          </div>
+          <div class="input-group">
+            <label for="xInit">Position initiale <span id="katexX0"></span> (m)</label>
+            <input type="number" id="xInit" value="0" step="1">
+          </div>
+          <button class="action" onclick="toggleCinematicSim()">Lancer / relancer la simulation</button>
+          <button class="action secondary" onclick="togglePause()" id="btnPause">Mettre en pause</button>
+        </div>
+      </div>
+
+      <div class="readout" id="cinematicStats"></div>
+      <div class="canvas-container">
+        <canvas id="kinematicsCanvas" width="900" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2 : ENGRENAGES -->
+  <div class="container">
+    <div class="panel">
+      <h2 class="panel-title">2 · Étude des engrenages & cinématique de rotation</h2>
+      <div class="panel-desc">Relations fondamentales entre nombre de dents (Z), vitesses angulaires (ω), fréquences de rotation (N) et vitesse tangentielle (v).</div>
+
+      <div class="grid-2">
+        <div>
+          <h3 class="sub-title">Formules clés de rotation</h3>
+          <div class="formula-card"><h4>Vitesse angulaire</h4><div class="formula-render" id="fg1"></div></div>
+          <div class="formula-card"><h4>Vitesse linéaire / tangentielle</h4><div class="formula-render" id="fg2"></div></div>
+          <div class="formula-card"><h4>Rapport de transmission</h4><div class="formula-render" id="fg3"></div></div>
+        </div>
+        <div>
+          <h3 class="sub-title">Configuration de la transmission</h3>
+          <div class="input-group">
+            <label for="z1">Dents roue 1 — meneuse <span id="katexZ1"></span></label>
+            <input type="number" id="z1" value="20" min="5" max="100" oninput="updateGears()">
+          </div>
+          <div class="input-group">
+            <label for="z2">Dents roue 2 — menée <span id="katexZ2"></span></label>
+            <input type="number" id="z2" value="40" min="5" max="100" oninput="updateGears()">
+          </div>
+          <div class="input-group">
+            <label for="n1">Fréquence roue 1 <span id="katexN1"></span> (tr/min)</label>
+            <input type="number" id="n1" value="120" step="10" oninput="updateGears()">
+          </div>
+          <div class="input-group">
+            <label for="module">Module des dents <span id="katexM"></span> (mm)</label>
+            <input type="number" id="module" value="2" step="0.5" min="0.5" oninput="updateGears()">
+          </div>
+        </div>
+      </div>
+
+      <div class="readout" id="gearResults"></div>
+      <div class="canvas-container">
+        <canvas id="gearCanvas" width="900" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+
+<script>
+function katexr(id, tex){ katex.render(tex, document.getElementById(id), {throwOnError:false}); }
+
+katexr('fk1', 'v(t) = \\dfrac{dx}{dt} = v_0 + a \\cdot t');
+katexr('fk2', 'x(t) = \\tfrac{1}{2} a t^2 + v_0 t + x_0');
+katexr('fk3', 'v^2 - v_0^2 = 2 a (x - x_0)');
+katexr('katexA', 'a'); katexr('katexV0', 'v_0'); katexr('katexX0', 'x_0');
+
+katexr('fg1', '\\omega = \\dfrac{2 \\pi N}{60} \\ \\text{(rad/s)}');
+katexr('fg2', 'v = \\omega \\cdot R = \\dfrac{\\pi D N}{60} \\ \\text{(m/s)}');
+katexr('fg3', 'k = \\dfrac{N_2}{N_1} = \\dfrac{Z_1}{Z_2} = \\dfrac{D_1}{D_2}');
+katexr('katexZ1', 'Z_1'); katexr('katexZ2', 'Z_2'); katexr('katexN1', 'N_1'); katexr('katexM', 'm');
+
+/* --- 1. SIMULATION CINÉMATIQUE --- */
+const kCanvas = document.getElementById('kinematicsCanvas');
+const kCtx = kCanvas.getContext('2d');
+let t = 0;
+let animationId = null;
+let isPaused = false;
+let kScale = 15;
+
+function estimateScale(a, v0, x0) {
+    // L'echelle fixe d'origine rendait les petites accelerations invisibles
+    // et les grandes hors-cadre en une fraction de seconde. On l'estime ici
+    // a partir de l'amplitude reelle du deplacement sur quelques secondes.
+    const horizon = 6;
+    let maxAbs = 1;
+    for (let s = 0.5; s <= horizon; s += 0.5) {
+        const x = 0.5 * a * s * s + v0 * s;
+        maxAbs = Math.max(maxAbs, Math.abs(x));
+    }
+    const usablePx = kCanvas.width - 90;
+    return Math.max(4, Math.min(60, usablePx / maxAbs));
+}
+
+function runKinematics() {
+    const a = parseFloat(document.getElementById('accel').value) || 0;
+    const v0 = parseFloat(document.getElementById('vInit').value) || 0;
+    const x0 = parseFloat(document.getElementById('xInit').value) || 0;
+
+    if (!isPaused) t += 0.05;
+
+    let xMeters = 0.5 * a * (t ** 2) + v0 * t + x0;
+    let vCurrent = v0 + a * t;
+    const displacement = xMeters - x0;
+
+    if (!isPaused && Math.abs(displacement) * kScale > kCanvas.width - 70) {
+        t = 0;
+        kScale = estimateScale(a, v0, x0);
+        xMeters = x0; vCurrent = v0;
+    }
+
+    document.getElementById('cinematicStats').innerHTML = `
+        <div class="rline"><span class="rlabel">Temps t</span><span class="rval">${t.toFixed(2)} s</span></div>
+        <div class="rline"><span class="rlabel">Position x(t)</span><span class="rval">${xMeters.toFixed(2)} m</span></div>
+        <div class="rline"><span class="rlabel">Vitesse v(t)</span><span class="rval">${vCurrent.toFixed(2)} m/s</span></div>`;
+
+    kCtx.clearRect(0, 0, kCanvas.width, kCanvas.height);
+    kCtx.strokeStyle = '#33456b'; kCtx.lineWidth = 2;
+    kCtx.beginPath(); kCtx.moveTo(0, 110); kCtx.lineTo(kCanvas.width, 110); kCtx.stroke();
+
+    kCtx.fillStyle = '#8fa3c4'; kCtx.font = '11px IBM Plex Mono, monospace';
+    const originPx = kCanvas.width / 2;
+    for (let i = 0; i < kCanvas.width; i += 60) {
+        kCtx.fillRect(i, 105, 2, 10);
+        kCtx.fillText((((i - originPx) / kScale)).toFixed(0) + 'm', i - 10, 135);
+    }
+
+    const pixelX = originPx + (displacement * kScale);
+    kCtx.fillStyle = '#22a7a0';
+    kCtx.beginPath(); kCtx.arc(pixelX, 95, 13, 0, Math.PI * 2); kCtx.fill();
+
+    kCtx.strokeStyle = '#d98e2c'; kCtx.lineWidth = 3;
+    const vLen = Math.max(-120, Math.min(120, vCurrent * 3));
+    kCtx.beginPath(); kCtx.moveTo(pixelX, 95); kCtx.lineTo(pixelX + vLen, 95); kCtx.stroke();
+
+    animationId = requestAnimationFrame(runKinematics);
+}
+
+function toggleCinematicSim() {
+    const a = parseFloat(document.getElementById('accel').value) || 0;
+    const v0 = parseFloat(document.getElementById('vInit').value) || 0;
+    const x0 = parseFloat(document.getElementById('xInit').value) || 0;
+    t = 0;
+    isPaused = false;
+    document.getElementById('btnPause').innerText = 'Mettre en pause';
+    kScale = estimateScale(a, v0, x0);
+    cancelAnimationFrame(animationId);
+    runKinematics();
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById('btnPause').innerText = isPaused ? 'Reprendre' : 'Mettre en pause';
+}
+
+/* --- 2. SIMULATION ENGRENAGES & VITESSES --- */
+const gCanvas = document.getElementById('gearCanvas');
+const gCtx = gCanvas.getContext('2d');
+let angle1 = 0;
+
+function updateGears() {
+    const Z1 = parseInt(document.getElementById('z1').value);
+    const Z2 = parseInt(document.getElementById('z2').value);
+    const N1 = parseFloat(document.getElementById('n1').value);
+    const m = parseFloat(document.getElementById('module').value);
+
+    const D1 = m * Z1;
+    const D2 = m * Z2;
+
+    const N2 = N1 * (Z1 / Z2);
+    const omega1 = (2 * Math.PI * N1) / 60;
+    const omega2 = (2 * Math.PI * N2) / 60;
+
+    // v est la vitesse tangentielle au point d'engrenement : elle doit etre
+    // identique calculee depuis chaque roue (c'est la condition physique de
+    // l'engrenement). On calcule les deux pour que l'egalite serve de
+    // verification visible plutot que d'imposer silencieusement une seule valeur.
+    const vLinear1 = (D1 / 2000) * omega1;
+    const vLinear2 = (D2 / 2000) * omega2;
+
+    document.getElementById('gearResults').innerHTML = `
+        <div class="rgroup">
+          <div class="rline"><span class="rlabel">Rapport de transmission k</span><span class="rval">${(Z1/Z2).toFixed(3)}</span></div>
+          <div class="rline"><span class="rlabel">Fréquence N₂</span><span class="rval">${N2.toFixed(1)} tr/min</span></div>
+        </div>
+        <div class="rgroup">
+          <div class="rline"><span class="rlabel">Diamètres primitifs D₁ · D₂</span><span class="rval">${D1} mm · ${D2} mm</span></div>
+          <div class="rline"><span class="rlabel">Vitesses angulaires ω₁ · ω₂</span><span class="rval">${omega1.toFixed(2)} · ${omega2.toFixed(2)} rad/s</span></div>
+        </div>
+        <div class="rgroup">
+          <div class="rline"><span class="rlabel">v tangentielle (vue de R1 / R2)</span><span class="rval" style="color:#5eead4;">${vLinear1.toFixed(3)} / ${vLinear2.toFixed(3)} m/s</span></div>
+        </div>`;
+}
+
+function drawGearsAnimation() {
+    const Z1 = parseInt(document.getElementById('z1').value);
+    const Z2 = parseInt(document.getElementById('z2').value);
+    const N1 = parseFloat(document.getElementById('n1').value);
+
+    angle1 += (N1 * 0.001);
+    const angle2 = -angle1 * (Z1 / Z2) + Math.PI / Z2; // inversion du sens de rotation
+
+    gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
+
+    const r1 = Z1 * 3.5;
+    const r2 = Z2 * 3.5;
+    const cx1 = 260;
+    const cy1 = 125;
+    const cx2 = cx1 + r1 + r2;
+    const cy2 = 125;
+
+    drawGear(gCtx, cx1, cy1, r1, Z1, angle1, '#22a7a0', 'Roue 1 (meneuse)');
+    drawGear(gCtx, cx2, cy2, r2, Z2, angle2, '#c65b5b', 'Roue 2 (menée)');
+
+    requestAnimationFrame(drawGearsAnimation);
+}
+
+function drawGear(ctx, cx, cy, radius, teeth, angle, color, label) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+
+    const toothHeight = 7;
+    const baseRadius = radius - 4;
+
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(0, 0, baseRadius, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#0b1220';
+    ctx.lineWidth = 1.5;
+
+    // Dents trapezoidales individuelles au lieu d'un simple polygone hérissé
+    // reliant des points autour du cercle (qui donnait une silhouette en
+    // etoile plutot que des dents reconnaissables).
+    for (let i = 0; i < teeth; i++) {
+        ctx.save();
+        ctx.rotate((i * 2 * Math.PI) / teeth);
+        ctx.beginPath();
+        const w = (Math.PI * 2) / teeth * 0.35;
+        ctx.moveTo(-radius * Math.sin(w), baseRadius);
+        ctx.lineTo(-radius * Math.sin(w * 0.7), baseRadius + toothHeight);
+        ctx.lineTo(radius * Math.sin(w * 0.7), baseRadius + toothHeight);
+        ctx.lineTo(radius * Math.sin(w), baseRadius);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+    }
+
+    ctx.fillStyle = '#0b1220';
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#dfe8f5';
+    ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = '#dfe8f5';
+    ctx.font = '13px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, cx, cy + radius + 24);
+}
+
+window.onload = function() {
+    kScale = estimateScale(parseFloat(document.getElementById('accel').value)||0, parseFloat(document.getElementById('vInit').value)||0, parseFloat(document.getElementById('xInit').value)||0);
+    runKinematics();
+    updateGears();
+    drawGearsAnimation();
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Interactive - Étude Détaillée & Équations Différentielles RLC, RC, RL, LC</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1050px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        h2 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+
+        /* Onglets pour les 4 cas séparés */
+        .tabs-header {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            flex: 1;
+            min-width: 110px;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            background-color: #e9ecef;
+            color: #495057;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            background-color: #007bff;
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,123,255,0.3);
+        }
+
+        .visual-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .visual-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pane {
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .pane-title {
+            color: #ddd;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            align-self: flex-start;
+        }
+
+        canvas {
+            display: block;
+            background: #121212;
+            border-radius: 6px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            background: #fafafa;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 0.85rem;
+        }
+
+        .param-control {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .param-row {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+        }
+
+        input[type=range] {
+            width: 100%;
+        }
+
+        button.action-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button.action-btn:hover {
+            background-color: #218838;
+        }
+
+        /* Section théorique, équations différentielles & valeurs */
+        .theory-panel {
+            background: #fdfdfe;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #6f42c1;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .theory-title {
+            font-weight: bold;
+            color: #6f42c1;
+            font-size: 0.95rem;
+        }
+
+        .formula-box {
+            font-family: 'Courier New', Courier, monospace;
+            background: #f1f3f5;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #212529;
+        }
+
+        .metrics-inline {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-weight: bold;
+            font-size: 0.9rem;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .info-box {
+            font-size: 0.85rem;
+            color: #555;
+            line-height: 1.5;
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-left: 4px solid #007bff;
+            padding: 12px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            <h2>Simulation Interactive : Équations Différentielles, Impédances & Phases (RLC, RC, RL, LC)</h2>
+            <p class="info-box" id="descBox">
+                Sélectionnez un circuit pour visualiser son équation différentielle caractéristique, ses formules d'impédance et de phase, ainsi que son comportement dynamique.
+            </p>
+
+            <!-- Onglets de sélection des 4 cas -->
+            <div class="tabs-header">
+                <button id="tabRLC" class="tab-btn active" onclick="switchCase('RLC')">1. Circuit RLC</button>
+                <button id="tabRC" class="tab-btn" onclick="switchCase('RC')">2. Circuit RC</button>
+                <button id="tabRL" class="tab-btn" onclick="switchCase('RL')">3. Circuit RL</button>
+                <button id="tabLC" class="tab-btn" onclick="switchCase('LC')">4. Circuit LC</button>
+            </div>
+
+            <!-- Commandes de l'interrupteur -->
+            <div class="controls">
+                <span style="font-weight: bold;">Contrôle de l'expérience :</span>
+                <button id="switchBtn" class="action-btn" onclick="toggleSwitch()">Interrupteur : FERMÉ</button>
+                <button onclick="resetSim()" style="background-color: #6c757d; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Réinitialiser</button>
+            </div>
+
+            <!-- Paramètres variables -->
+            <div class="params-grid">
+                <div class="param-control" id="ctrlR">
+                    <div class="param-row"><span>Résistance (R) :</span><span id="valR">100</span> $\Omega$</div>
+                    <input type="range" id="sliderR" min="10" max="500" step="10" value="100" oninput="updateCalculations()">
+                </div>
+                <div class="param-control" id="ctrlC">
+                    <div class="param-row"><span>Capacité (C) :</span><span id="valC">100</span> $\mu\text{F}$</div>
+                    <input type="range" id="sliderC" min="10" max="400" step="10" value="100" oninput="updateCalculations()">
+                </div>
+                <div class="param-control" id="ctrlL">
+                    <div class="param-row"><span>Inductance (L) :</span><span id="valL">0.5</span> $\text{H}$</div>
+                    <input type="range" id="sliderL" min="0.1" max="2.0" step="0.1" value="0.5" oninput="updateCalculations()">
+                </div>
+                <div class="param-control">
+                    <div class="param-row"><span>Fréquence ($f$) :</span><span id="valF">50</span> $\text{Hz}$</div>
+                    <input type="range" id="sliderF" min="10" max="200" step="5" value="50" oninput="updateCalculations()">
+                </div>
+            </div>
+
+            <!-- Panneau Théorique : Équation Différentielle, Impédance, Phase -->
+            <div class="theory-panel">
+                <div class="theory-title" id="theoryTitle">Analyse Théorique - Circuit RLC Série</div>
+                <div class="formula-box" id="formulaDiff">Éq. Différentielle : L(d²q/dt²) + R(dq/dt) + (1/C)q = e(t)</div>
+                <div class="formula-box" id="formulaZ">Impédance Z = sqrt(R² + (Lω - 1/Cω)²)</div>
+                <div class="formula-box" id="formulaPhi">Déphasage tan(φ) = (Lω - 1/Cω) / R</div>
+                <div class="metrics-inline">
+                    <div>Impédance ($Z$) : <span id="resZ" style="color: #007bff;">--</span> $\Omega$</div>
+                    <div>Déphasage ($\varphi$) : <span id="resPhi" style="color: #d63384;">--</span></div>
+                </div>
+            </div>
+
+            <!-- Zone Graphique -->
+            <div class="visual-grid">
+                <div class="pane">
+                    <span class="pane-title">Schéma du circuit & Flux de charges</span>
+                    <canvas id="circuitCanvas" width="480" height="260"></canvas>
+                </div>
+                <div class="pane">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 5px; flex-wrap: wrap; gap: 5px;">
+                        <span class="pane-title" style="margin-bottom:0;">Oscilloscope</span>
+                        <!-- NOUVEAUX BOUTONS AJOUTÉS SANS MODIFIER LE CODE SOURCE INITIAL -->
+                        <div style="display: flex; gap: 4px; font-size: 0.75rem;">
+                            <button id="btnU" onclick="setSignalMode('u')" style="background:#00ffcc; border:none; padding:3px 6px; border-radius:4px; cursor:pointer; font-weight:bold;">Tension</button>
+                            <button id="btnI" onclick="setSignalMode('i')" style="background:#444; color:#fff; border:none; padding:3px 6px; border-radius:4px; cursor:pointer; font-weight:bold;">Intensité</button>
+                            <button id="btnBoth" onclick="setSignalMode('both')" style="background:#444; color:#fff; border:none; padding:3px 6px; border-radius:4px; cursor:pointer; font-weight:bold;">Les 2</button>
+                            <button onclick="adjustZoom(1.25)" title="Zoom Avant" style="background:#6f42c1; color:#fff; border:none; padding:3px 6px; border-radius:4px; cursor:pointer;">+</button>
+                            <button onclick="adjustZoom(0.8)" title="Zoom Arrière" style="background:#6f42c1; color:#fff; border:none; padding:3px 6px; border-radius:4px; cursor:pointer;">-</button>
+                            <button onclick="resetZoom()" title="Reset Zoom" style="background:#555; color:#fff; border:none; padding:3px 6px; border-radius:4px; cursor:pointer;">⟲</button>
+                        </div>
+                    </div>
+                    <canvas id="oscopeCanvas" width="480" height="235"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const circuitCanvas = document.getElementById('circuitCanvas');
+        const ctxC = circuitCanvas.getContext('2d');
+        const oscopeCanvas = document.getElementById('oscopeCanvas');
+        const ctxO = oscopeCanvas.getContext('2d');
+        const descBox = document.getElementById('descBox');
+        const switchBtn = document.getElementById('switchBtn');
+        const theoryTitle = document.getElementById('theoryTitle');
+        const formulaDiff = document.getElementById('formulaDiff');
+        const formulaZ = document.getElementById('formulaZ');
+        const formulaPhi = document.getElementById('formulaPhi');
+        const resZ = document.getElementById('resZ');
+        const resPhi = document.getElementById('resPhi');
+
+        let currentCase = 'RLC';
+        let isSwitchClosed = true;
+        let simTime = 0;
+        let waveHistory = [];
+        let waveHistoryI = [];
+
+        let R = 100;
+        let C = 100;
+        let L = 0.5;
+        let f = 50;
+
+        // Variables pour la surcouche (Signaux & Zoom)
+        let signalMode = 'u'; // 'u', 'i', 'both'
+        let zoomFactor = 1.0;
+
+        function setSignalMode(mode) {
+            signalMode = mode;
+            document.getElementById('btnU').style.background = (mode === 'u') ? '#00ffcc' : '#444';
+            document.getElementById('btnU').style.color = (mode === 'u') ? '#000' : '#fff';
+            document.getElementById('btnI').style.background = (mode === 'i') ? '#ff9800' : '#444';
+            document.getElementById('btnI').style.color = (mode === 'i') ? '#000' : '#fff';
+            document.getElementById('btnBoth').style.background = (mode === 'both') ? '#e91e63' : '#444';
+            document.getElementById('btnBoth').style.color = (mode === 'both') ? '#fff' : '#fff';
+        }
+
+        function adjustZoom(factor) {
+            zoomFactor *= factor;
+            if (zoomFactor < 0.2) zoomFactor = 0.2;
+            if (zoomFactor > 10) zoomFactor = 10;
+        }
+
+        function resetZoom() {
+            zoomFactor = 1.0;
+        }
+
+        const caseData = {
+            RLC: {
+                title: "Analyse Théorique - Circuit RLC Série",
+                fdiff: "L \\frac{d^2q}{dt^2} + R \\frac{dq}{dt} + \\frac{1}{C}q = e(t) \\quad \\text{ou} \\quad L\\frac{di}{dt} + Ri + \\frac{1}{C}\\int i\,dt = e(t)",
+                fz: "Z = \\sqrt{R^2 + (L\\omega - \\frac{1}{C\\omega})^2}",
+                fphi: "\\tan(\\varphi) = \\frac{L\\omega - \\frac{1}{C\\omega}}{R}",
+                desc: "<strong>1. Circuit RLC :</strong> Régis par une équation différentielle du 2nd ordre. Les oscillations peuvent être amorties selon les valeurs de R, L et C."
+            },
+            RC: {
+                title: "Analyse Théorique - Circuit RC Série",
+                fdiff: "R \\frac{dq}{dt} + \\frac{1}{C}q = e(t) \\quad \\text{ou} \\quad R i + \\frac{1}{C}\\int i\,dt = e(t)",
+                fz: "Z = \\sqrt{R^2 + (\\frac{1}{C\\omega})^2}",
+                fphi: "\\tan(\\varphi) = \\frac{-1}{R C \\omega}",
+                desc: "<strong>2. Circuit RC :</strong> Régis par une équation différentielle du 1er ordre. Caractérisé par une constante de temps $\\tau = R \\cdot C$."
+            },
+            RL: {
+                title: "Analyse Théorique - Circuit RL Série",
+                fdiff: "L \\frac{di}{dt} + R i = e(t)",
+                fz: "Z = \\sqrt{R^2 + (L\\omega)^2}",
+                fphi: "\\tan(\\varphi) = \\frac{L\\omega}{R}",
+                desc: "<strong>3. Circuit RL :</strong> Régis par une équation différentielle du 1er ordre liant la tension et le courant à travers l'inductance $L$ et la résistance $R$."
+            },
+            LC: {
+                title: "Analyse Théorique - Circuit LC Idéal",
+                fdiff: "L \\frac{d^2q}{dt^2} + \\frac{1}{C}q = 0 \\quad (R \\approx 0)",
+                fz: "Z = |L\\omega - \\frac{1}{C\\omega}|",
+                fphi: "\\varphi = \\pm 90°",
+                desc: "<strong>4. Circuit LC :</strong> Oscillateur harmonique non amorti régi par une équation différentielle homogène du 2nd ordre."
+            }
+        };
+
+        function switchCase(cType) {
+            currentCase = cType;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab' + cType).classList.add('active');
+
+            descBox.innerHTML = caseData[cType].desc;
+            theoryTitle.textContent = caseData[cType].title;
+            formulaDiff.textContent = "Éq. Diff. : " + caseData[cType].fdiff;
+            formulaZ.textContent = "Impédance Z = " + caseData[cType].fz;
+            formulaPhi.textContent = "Déphasage tan(φ) = " + caseData[cType].fphi;
+
+            document.getElementById('ctrlR').style.display = (cType === 'LC') ? 'none' : 'flex';
+            document.getElementById('ctrlC').style.display = (cType === 'RL') ? 'none' : 'flex';
+            document.getElementById('ctrlL').style.display = (cType === 'RC') ? 'none' : 'flex';
+
+            resetSim();
+        }
+
+        function toggleSwitch() {
+            isSwitchClosed = !isSwitchClosed;
+            switchBtn.textContent = isSwitchClosed ? "Interrupteur : FERMÉ" : "Interrupteur : OUVERT";
+            switchBtn.style.backgroundColor = isSwitchClosed ? "#28a745" : "#dc3545";
+            simTime = 0;
+            waveHistory.length = 0;
+            waveHistoryI.length = 0;
+        }
+
+        function updateCalculations() {
+            R = parseFloat(document.getElementById('sliderR').value);
+            C = parseFloat(document.getElementById('sliderC').value);
+            L = parseFloat(document.getElementById('sliderL').value);
+            f = parseFloat(document.getElementById('sliderF').value);
+
+            document.getElementById('valR').textContent = R;
+            document.getElementById('valC').textContent = C;
+            document.getElementById('valL').textContent = L.toFixed(1);
+            document.getElementById('valF').textContent = f;
+
+            let omega = 2 * Math.PI * f;
+            let Xc = (C > 0) ? (1 / (C * 1e-6 * omega)) : 0;
+            let Xl = L * omega;
+            let Z = 0;
+            let phiRad = 0;
+
+            if (currentCase === 'RLC') {
+                let reactance = Xl - Xc;
+                Z = Math.sqrt(R * R + reactance * reactance);
+                phiRad = Math.atan(reactance / R);
+            } else if (currentCase === 'RC') {
+                Z = Math.sqrt(R * R + Xc * Xc);
+                phiRad = Math.atan(-Xc / R);
+            } else if (currentCase === 'RL') {
+                Z = Math.sqrt(R * R + Xl * Xl);
+                phiRad = Math.atan(Xl / R);
+            } else if (currentCase === 'LC') {
+                Z = Math.abs(Xl - Xc);
+                phiRad = (Xl > Xc) ? Math.PI / 2 : -Math.PI / 2;
+            }
+
+            let phiDeg = (phiRad * 180 / Math.PI).toFixed(1);
+            resZ.textContent = Z.toFixed(1);
+            resPhi.textContent = (phiDeg >= 0 ? "+" : "") + phiDeg + "°";
+        }
+
+        function resetSim() {
+            simTime = 0;
+            waveHistory.length = 0;
+            waveHistoryI.length = 0;
+            updateCalculations();
+        }
+
+        // --- DESSIN DU CIRCUIT ---
+        function drawCircuit() {
+            ctxC.clearRect(0, 0, circuitCanvas.width, circuitCanvas.height);
+            const w = circuitCanvas.width;
+            const h = circuitCanvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+
+            ctxC.strokeStyle = '#666';
+            ctxC.lineWidth = 3;
+            ctxC.strokeRect(60, 40, w - 120, h - 80);
+
+            // Générateur
+            ctxC.fillStyle = '#007bff';
+            ctxC.fillRect(52, cy - 20, 16, 40);
+            ctxC.fillStyle = '#fff';
+            ctxC.font = 'bold 12px Arial';
+            ctxC.fillText("E", 56, cy + 4);
+
+            // Interrupteur
+            ctxC.strokeStyle = '#ffeb3b';
+            ctxC.lineWidth = 3;
+            ctxC.beginPath();
+            ctxC.moveTo(110, 40);
+            if (isSwitchClosed) ctxC.lineTo(160, 40);
+            else ctxC.lineTo(150, 20);
+            ctxC.stroke();
+            ctxC.fillStyle = '#ffeb3b';
+            ctxC.fillText("K", 130, 25);
+
+            // Résistor R
+            if (currentCase !== 'LC') {
+                ctxC.strokeStyle = '#ff9800';
+                ctxC.beginPath();
+                ctxC.moveTo(cx - 50, 40);
+                let rx = cx - 40;
+                for (let i = 0; i < 4; i++) {
+                    ctxC.lineTo(rx, 30); rx += 10;
+                    ctxC.lineTo(rx, 50); rx += 10;
+                }
+                ctxC.lineTo(cx + 50, 40);
+                ctxC.stroke();
+                ctxC.fillStyle = '#ff9800';
+                ctxC.fillText("R = " + R + "Ω", cx - 25, 25);
+            }
+
+            // Condensateur
+            if (currentCase === 'RLC' || currentCase === 'RC' || currentCase === 'LC') {
+                ctxC.strokeStyle = '#28a745';
+                ctxC.lineWidth = 4;
+                ctxC.beginPath();
+                ctxC.moveTo(w - 60, cy - 25); ctxC.lineTo(w - 60, cy - 5);
+                ctxC.moveTo(w - 60, cy + 5); ctxC.lineTo(w - 60, cy + 25);
+                ctxC.stroke();
+                ctxC.lineWidth = 3;
+                ctxC.fillStyle = '#28a745';
+                ctxC.fillText("C=" + C + "µF", w - 55, cy + 5);
+            }
+
+            // Bobine
+            if (currentCase === 'RLC' || currentCase === 'RL' || currentCase === 'LC') {
+                let bx = w - 120;
+                let by = h - 40;
+                ctxC.strokeStyle = '#ab47bc';
+                ctxC.beginPath();
+                ctxC.moveTo(bx - 30, by);
+                for (let i = 0; i < 3; i++) {
+                    ctxC.arc(bx - 15 + i * 16, by, 8, Math.PI, 0, false);
+                }
+                ctxC.lineTo(bx + 35, by);
+                ctxC.stroke();
+                ctxC.fillStyle = '#ab47bc';
+                ctxC.fillText("L=" + L + "H", bx, by - 15);
+            }
+
+            // Flux de charges
+            if (isSwitchClosed) {
+                let numCharges = 12;
+                let perimeter = 2 * ((w - 120) + (h - 80));
+                ctxC.fillStyle = '#ffeb3b';
+                for (let i = 0; i < numCharges; i++) {
+                    let dist = (simTime * 50 + (i * perimeter / numCharges)) % perimeter;
+                    let pos = getRectPoint(dist, w, h);
+                    ctxC.beginPath();
+                    ctxC.arc(pos.x, pos.y, 4, 0, 2 * Math.PI);
+                    ctxC.fill();
+                }
+            }
+        }
+
+        function getRectPoint(d, w, h) {
+            let x1 = 60, y1 = 40, x2 = w - 60, y2 = h - 40;
+            let w_side = x2 - x1, h_side = y2 - y1;
+            let p1 = w_side, p2 = p1 + h_side, p3 = p2 + w_side, p4 = p3 + h_side;
+            d = d % p4;
+            if (d < p1) return { x: x1 + d, y: y1 };
+            if (d < p2) return { x: x2, y: y1 + (d - p1) };
+            if (d < p3) return { x: x2 - (d - p2), y: y2 };
+            return { x: x1, y: y2 - (d - p3) };
+        }
+
+        // --- DESSIN OSCILLOSCOPE ---
+        function drawOscope() {
+            ctxO.clearRect(0, 0, oscopeCanvas.width, oscopeCanvas.height);
+            const w = oscopeCanvas.width;
+            const h = oscopeCanvas.height;
+            const cy = h / 2;
+
+            ctxO.strokeStyle = 'rgba(0, 255, 0, 0.15)';
+            ctxO.lineWidth = 1;
+            for (let x = 0; x < w; x += 30) { ctxO.beginPath(); ctxO.moveTo(x, 0); ctxO.lineTo(x, h); ctxO.stroke(); }
+            for (let y = 0; y < h; y += 30) { ctxO.beginPath(); ctxO.moveTo(0, y); ctxO.lineTo(w, y); ctxO.stroke(); }
+
+            ctxO.strokeStyle = 'rgba(0, 255, 0, 0.4)';
+            ctxO.beginPath(); ctxO.moveTo(0, cy); ctxO.lineTo(w, cy); ctxO.stroke();
+
+            let valU = 0;
+            let valI = 0;
+            let t = simTime * 0.04;
+            let omega = 2 * Math.PI * (f / 20);
+
+            if (currentCase === 'RC' || currentCase === 'RL') {
+                if (isSwitchClosed) {
+                    let tau = (currentCase === 'RC') ? (R * C) / 10000 : ((L / R) * 5 + 0.2);
+                    valU = 70 * (1 - Math.exp(-t / (tau + 0.1)));
+                    valI = 70 * Math.exp(-t / (tau + 0.1));
+                } else {
+                    let tau = (currentCase === 'RC') ? (R * C) / 10000 : ((L / R) * 5 + 0.2);
+                    valU = 70 * Math.exp(-t / (tau + 0.1));
+                    valI = -70 * Math.exp(-t / (tau + 0.1));
+                }
+            } else if (currentCase === 'LC') {
+                valU = 70 * Math.cos(omega * t);
+                valI = 70 * Math.sin(omega * t);
+            } else if (currentCase === 'RLC') {
+                let damping = R / (2 * L * 10);
+                valU = 70 * Math.exp(-damping * t * 0.2) * Math.cos(omega * t);
+                valI = 70 * Math.exp(-damping * t * 0.2) * Math.sin(omega * t);
+            }
+
+            // Appliquer le facteur de zoom vertical et amplitude
+            valU *= zoomFactor;
+            valI *= zoomFactor;
+
+            waveHistory.push(valU);
+            waveHistoryI.push(valI);
+            if (waveHistory.length > w - 40) {
+                waveHistory.shift();
+                waveHistoryI.shift();
+            }
+
+            // Dessin de la Tension (u)
+            if (signalMode === 'u' || signalMode === 'both') {
+                ctxO.strokeStyle = '#00ffcc';
+                ctxO.lineWidth = 2;
+                ctxO.beginPath();
+                let startX = 20;
+                for (let i = 0; i < waveHistory.length; i++) {
+                    let x = startX + i;
+                    let y = cy - waveHistory[i];
+                    if (i === 0) ctxO.moveTo(x, y);
+                    else ctxO.lineTo(x, y);
+                }
+                ctxO.stroke();
+            }
+
+            // Dessin de l'Intensité (i)
+            if (signalMode === 'i' || signalMode === 'both') {
+                ctxO.strokeStyle = '#ff9800';
+                ctxO.lineWidth = 2;
+                ctxO.beginPath();
+                let startX = 20;
+                for (let i = 0; i < waveHistoryI.length; i++) {
+                    let x = startX + i;
+                    let y = cy - waveHistoryI[i];
+                    if (i === 0) ctxO.moveTo(x, y);
+                    else ctxO.lineTo(x, y);
+                }
+                ctxO.stroke();
+            }
+        }
+
+        function loop() {
+            simTime += 1;
+            drawCircuit();
+            drawOscope();
+            requestAnimationFrame(loop);
+        }
+
+        switchCase('RLC');
+        loop();
+    </script>
+</body>
+</html>

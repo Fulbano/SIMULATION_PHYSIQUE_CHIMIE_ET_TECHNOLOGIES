@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulation Mécanique : Ondes, Oscillateurs, Pendules & Forces Dynamiques</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 20px;
+        background: #090d16;
+        color: #f8fafc;
+        font-family: system-ui, -apple-system, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    h1 {
+        font-size: 1.5rem;
+        color: #38bdf8;
+        margin-bottom: 5px;
+        text-align: center;
+    }
+    .subtitle {
+        color: #94a3b8;
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    .toolbar {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+    }
+    .tab-btn {
+        background: #1e293b;
+        color: #94a3b8;
+        border: 1px solid #334155;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+    }
+    .tab-btn.active {
+        background: #0284c7;
+        color: white;
+        border-color: #0284c7;
+    }
+    .pause-btn {
+        background: #0284c7;
+        color: white;
+        border: 1px solid #0284c7;
+        padding: 8px 18px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-size: 0.85rem;
+    }
+    .pause-btn.paused {
+        background: #eab308;
+        border-color: #eab308;
+        color: #090d16;
+    }
+    .sim-container {
+        display: none;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+        max-width: 1250px;
+        width: 100%;
+    }
+    .sim-container.active {
+        display: flex;
+    }
+    .card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+    }
+    canvas {
+        background: #030712;
+        border-radius: 8px;
+        display: block;
+        margin: auto;
+        max-width: 100%;
+        height: auto;
+    }
+    .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 320px;
+        max-width: 380px;
+    }
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .control-group label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.85rem;
+        color: #94a3b8;
+    }
+    .control-group .val {
+        color: #f8fafc;
+        font-weight: 600;
+        font-family: ui-monospace, monospace;
+    }
+    input[type="range"] {
+        width: 100%;
+        accent-color: #38bdf8;
+    }
+    button.action-btn {
+        background: #0284c7;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.2s;
+        text-align: center;
+    }
+    button.action-btn:hover { background: #0369a1; }
+    button.reset-btn {
+        background: #334155;
+        color: #f8fafc;
+        border: 1px solid #475569;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        text-align: center;
+    }
+    button.reset-btn:hover { background: #475569; }
+    .btn-row { display: flex; gap: 8px; }
+    .btn-row > * { flex: 1; }
+    .info-panel {
+        background: #0f172a;
+        padding: 14px;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        font-size: 0.85rem;
+    }
+    .info-panel h3 {
+        margin: 0 0 10px 0;
+        font-size: 0.9rem;
+        color: #38bdf8;
+    }
+    .eq-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin: 8px 0;
+        line-height: 1.4;
+    }
+    .eq-label {
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .eq-value {
+        color: #38bdf8;
+        font-weight: 700;
+        font-family: ui-monospace, monospace;
+        white-space: nowrap;
+    }
+    .katex { font-size: 0.95em; }
+    .explanation {
+        margin-top: 25px;
+        max-width: 900px;
+        background: #1e293b;
+        padding: 15px 20px;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        border-left: 4px solid #38bdf8;
+    }
+</style>
+</head>
+<body>
+
+<h1>Simulation de mécanique physique</h1>
+<div class="subtitle">Ondes, oscillateurs, pendules, trajectoires & forces dynamiques</div>
+
+<div class="toolbar">
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="string" onclick="switchTab('string')">1. Cordes vibrantes</button>
+        <button class="tab-btn" data-tab="spring" onclick="switchTab('spring')">2. Oscillateur masse-ressort</button>
+        <button class="tab-btn" data-tab="pendulum" onclick="switchTab('pendulum')">3. Pendule simple</button>
+    </div>
+    <button class="pause-btn" id="pauseBtn" onclick="togglePause()">⏸ Pause & figer</button>
+</div>
+
+<!-- SIMULATION 1 : CORDES VIBRANTES -->
+<div id="string" class="sim-container active">
+    <div class="card">
+        <canvas id="stringCanvas" width="550" height="380"></canvas>
+    </div>
+    <div class="card controls">
+        <div class="control-group">
+            <label>Mode harmonique (<span class="eq-tex" data-tex="n"></span>) : <span class="val" id="harmonicVal">1</span></label>
+            <input type="range" id="harmonicRange" min="1" max="5" step="1" value="1" oninput="updateStringParams()">
+        </div>
+        <div class="control-group">
+            <label>Fréquence (<span class="eq-tex" data-tex="f"></span>) : <span class="val" id="stringFreqVal">2.0</span> Hz</label>
+            <input type="range" id="stringFreqRange" min="0.5" max="5.0" step="0.5" value="2.0" oninput="updateStringParams()">
+        </div>
+        <div class="control-group">
+            <label>Tension de la corde (<span class="eq-tex" data-tex="T"></span>) : <span class="val" id="tensionVal">10</span> N</label>
+            <input type="range" id="tensionRange" min="2" max="25" step="1" value="10" oninput="updateStringParams()">
+        </div>
+        <button class="reset-btn" onclick="resetString()">Réinitialiser</button>
+        <div class="info-panel">
+            <h3>Bilan théorique & expressions</h3>
+            <div class="eq-row">
+                <span class="eq-label">Célérité <span class="eq-tex" data-tex="c=\sqrt{T/\mu}"></span></span>
+                <span class="eq-value" id="strEqSpeed">-- m/s</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Fréquence <span class="eq-tex" data-tex="f_n=\frac{n\,c}{2L}"></span></span>
+                <span class="eq-value" id="strEqFreq">-- Hz</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Longueur d'onde <span class="eq-tex" data-tex="\lambda_n=\frac{2L}{n}"></span></span>
+                <span class="eq-value" id="strEqWavelength">-- m</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Forces : tension <span class="eq-tex" data-tex="\vec{T}"></span> aux extrémités</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SIMULATION 2 : MASSE-RESSORT & ÉNERGIES -->
+<div id="spring" class="sim-container">
+    <div class="card">
+        <canvas id="springCanvas" width="550" height="380"></canvas>
+    </div>
+    <div class="card controls">
+        <div class="control-group">
+            <label>Constante de raideur (<span class="eq-tex" data-tex="k"></span>) : <span class="val" id="springKVal">20</span> N/m</label>
+            <input type="range" id="springKRange" min="5" max="50" step="5" value="20" oninput="updateSpringParams()">
+        </div>
+        <div class="control-group">
+            <label>Masse (<span class="eq-tex" data-tex="m"></span>) : <span class="val" id="springMVal">0.5</span> kg</label>
+            <input type="range" id="springMRange" min="0.1" max="2.0" step="0.1" value="0.5" oninput="updateSpringParams()">
+        </div>
+        <div class="control-group">
+            <label>Amortissement (<span class="eq-tex" data-tex="\gamma"></span>) : <span class="val" id="springDampVal">0.05</span></label>
+            <input type="range" id="springDampRange" min="0.0" max="0.2" step="0.01" value="0.05" oninput="updateSpringParams()">
+        </div>
+        <div class="btn-row">
+            <button class="action-btn" onclick="exciterSpring()">Exciter (impulsion)</button>
+            <button class="reset-btn" onclick="resetSpring()">Réinitialiser</button>
+        </div>
+        <div class="info-panel">
+            <h3>Bilan théorique & expressions</h3>
+            <div class="eq-row">
+                <span class="eq-label">Rappel élastique <span class="eq-tex" data-tex="\vec{F}_r=-kx\,\vec{i}"></span></span>
+                <span class="eq-value" id="springForcesInfo">-- N</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Amortissement <span class="eq-tex" data-tex="\vec{f}=-\gamma v\,\vec{i}"></span></span>
+                <span class="eq-value" id="springDampInfo">-- N</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Pulsation <span class="eq-tex" data-tex="\omega_0=\sqrt{k/m}"></span></span>
+                <span class="eq-value" id="springOmega0">-- rad/s</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Période <span class="eq-tex" data-tex="T_0=\frac{2\pi}{\omega_0}"></span></span>
+                <span class="eq-value" id="springT0">-- s</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Énergie mécanique <span class="eq-tex" data-tex="E_m"></span></span>
+                <span class="eq-value" id="enEm">-- J</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SIMULATION 3 : PENDULE SIMPLE & ÉNERGIES -->
+<div id="pendulum" class="sim-container">
+    <div class="card">
+        <canvas id="pendulumCanvas" width="550" height="380"></canvas>
+    </div>
+    <div class="card controls">
+        <div class="control-group">
+            <label>Longueur du fil (<span class="eq-tex" data-tex="L"></span>) : <span class="val" id="pendLVal">1.5</span> m</label>
+            <input type="range" id="pendLRange" min="0.5" max="2.5" step="0.1" value="1.5" oninput="updatePendParams()">
+        </div>
+        <div class="control-group">
+            <label>Angle initial (<span class="eq-tex" data-tex="\theta_0"></span>) : <span class="val" id="pendAngleVal">45</span>°</label>
+            <input type="range" id="pendAngleRange" min="10" max="80" step="5" value="45" oninput="updatePendParams()">
+        </div>
+        <div class="control-group">
+            <label>Masse (<span class="eq-tex" data-tex="m"></span>) : <span class="val" id="pendMVal">1.0</span> kg</label>
+            <input type="range" id="pendMRange" min="0.2" max="3.0" step="0.2" value="1.0" oninput="updatePendParams()">
+        </div>
+        <button class="reset-btn" onclick="updatePendParams()">Réinitialiser</button>
+        <div class="info-panel">
+            <h3>Bilan théorique & expressions</h3>
+            <div class="eq-row">
+                <span class="eq-label">Angle <span class="eq-tex" data-tex="\theta"></span></span>
+                <span class="eq-value" id="pendCurrentAngle">--°</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Hauteur <span class="eq-tex" data-tex="h=L(1-\cos\theta)"></span></span>
+                <span class="eq-value" id="pendHeight">-- m</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Pulsation <span class="eq-tex" data-tex="\omega_0=\sqrt{g/L}"></span></span>
+                <span class="eq-value" id="pendOmega0">-- rad/s</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Période <span class="eq-tex" data-tex="T_0=2\pi\sqrt{L/g}"></span></span>
+                <span class="eq-value" id="pendT0">-- s</span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Tension <span class="eq-tex" data-tex="\vec{T}\approx\left(mg\cos\theta+\frac{mv^2}{L}\right)\vec{u}_r"></span></span>
+            </div>
+            <div class="eq-row">
+                <span class="eq-label">Énergie mécanique <span class="eq-tex" data-tex="E_m"></span></span>
+                <span class="eq-value" id="pendEm">-- J</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="explanation" id="explanationText">
+    <strong>Cordes vibrantes :</strong> visualisez la tension aux points d'ancrage et l'ensemble des expressions analytiques associées au mode stationnaire.
+</div>
+
+<script>
+// ---------- Rendu KaTeX (une seule fois, sur les formules statiques) ----------
+function renderAllTex() {
+    document.querySelectorAll('.eq-tex').forEach(el => {
+        const tex = el.dataset.tex;
+        if (!tex) return;
+        try {
+            katex.render(tex, el, { throwOnError: false });
+        } catch (e) {
+            el.textContent = tex;
+        }
+    });
+}
+renderAllTex();
+
+// ---------- Pause générale ----------
+let isPaused = false;
+
+function togglePause() {
+    isPaused = !isPaused;
+    const btn = document.getElementById('pauseBtn');
+    if (isPaused) {
+        btn.innerHTML = "▶ Reprendre";
+        btn.classList.add('paused');
+    } else {
+        btn.innerHTML = "⏸ Pause & figer";
+        btn.classList.remove('paused');
+    }
+}
+
+// ---------- Navigation par onglets ----------
+const explanations = {
+    string: "<strong>Cordes vibrantes :</strong> visualisez la tension aux points d'ancrage et l'onde stationnaire associée.",
+    spring: "<strong>Oscillateur masse-ressort :</strong> forces dynamiques (rappel, amortissement, poids, réaction) et expressions analytiques complètes.",
+    pendulum: "<strong>Pendule simple :</strong> trajectoire circulaire, forces dynamiques (poids, tension du fil) et expressions analytiques fondamentales."
+};
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+    document.querySelectorAll('.sim-container').forEach(c => c.classList.toggle('active', c.id === tabId));
+    document.getElementById('explanationText').innerHTML = explanations[tabId];
+}
+
+// ---------- Utilitaires de dessin ----------
+function drawVector(ctx, fromX, fromY, toX, toY, color, label) {
+    const headLength = 8;
+    const angle = Math.atan2(toY - fromY, toX - fromX);
+
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2.5;
+
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6), toY - headLength * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6), toY - headLength * Math.sin(angle + Math.PI / 6));
+    ctx.lineTo(toX, toY);
+    ctx.fill();
+
+    if (label) {
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(label, toX + 5, toY + 5);
+    }
+}
+
+function drawRuler(ctx, startX, startY, lengthPx, stepCount) {
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+    ctx.fillRect(startX, startY, lengthPx, 18);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(startX, startY, lengthPx, 18);
+
+    const stepPx = lengthPx / stepCount;
+    for (let i = 0; i <= stepCount; i++) {
+        const rx = startX + i * stepPx;
+        const tickHeight = (i % 5 === 0) ? 10 : 5;
+        ctx.strokeStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.moveTo(rx, startY + 18);
+        ctx.lineTo(rx, startY + 18 - tickHeight);
+        ctx.stroke();
+
+        if (i % 5 === 0) {
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = '9px sans-serif';
+            ctx.fillText(i * 10, rx - 6, startY + 10);
+        }
+    }
+}
+
+function drawEnergyBars(ctx, barY, barMaxWidth, maxEnergy, rows) {
+    // rows: [{label, value, color}]
+    rows.forEach((row, i) => {
+        const y = barY + i * 22;
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(75, y, barMaxWidth, 14);
+        ctx.fillStyle = row.color;
+        ctx.fillRect(75, y, Math.max(0, Math.min(barMaxWidth, (row.value / maxEnergy) * barMaxWidth)), 14);
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(row.label, 75 - 25 - (row.label.length > 2 ? 5 : 0), y + 11);
+    });
+}
+
+// ==================== SIMULATION 1 : CORDES VIBRANTES ====================
+const strCanvas = document.getElementById('stringCanvas');
+const strCtx = strCanvas.getContext('2d');
+let strParams = { harmonic: 1, freq: 2.0, tension: 10, mu: 0.05 };
+let strTime = 0;
+
+function updateStringParams() {
+    strParams.harmonic = parseInt(document.getElementById('harmonicRange').value, 10);
+    document.getElementById('harmonicVal').textContent = strParams.harmonic;
+    strParams.freq = parseFloat(document.getElementById('stringFreqRange').value);
+    document.getElementById('stringFreqVal').textContent = strParams.freq.toFixed(1);
+    strParams.tension = parseFloat(document.getElementById('tensionRange').value);
+    document.getElementById('tensionVal').textContent = strParams.tension;
+}
+
+function resetString() {
+    document.getElementById('harmonicRange').value = 1;
+    document.getElementById('stringFreqRange').value = 2.0;
+    document.getElementById('tensionRange').value = 10;
+    updateStringParams();
+    strTime = 0;
+}
+
+function runString() {
+    strCtx.clearRect(0, 0, strCanvas.width, strCanvas.height);
+
+    if (!isPaused) strTime += 0.04 * strParams.freq;
+
+    const L = strCanvas.width - 100;
+    const startX = 50;
+    const centerY = 160;
+
+    const speed = Math.sqrt(strParams.tension / strParams.mu);
+    const Lmeters = L / 100;
+    const freqVal = (strParams.harmonic * speed) / (2 * Lmeters);
+    const wavelength = (2 * Lmeters) / strParams.harmonic;
+
+    document.getElementById('strEqSpeed').textContent = speed.toFixed(1) + ' m/s';
+    document.getElementById('strEqFreq').textContent = freqVal.toFixed(1) + ' Hz';
+    document.getElementById('strEqWavelength').textContent = wavelength.toFixed(2) + ' m';
+
+    drawRuler(strCtx, 50, 240, L, 20);
+
+    strCtx.fillStyle = '#64748b';
+    strCtx.fillRect(40, centerY - 40, 10, 80);
+    strCtx.fillRect(strCanvas.width - 50, centerY - 40, 10, 80);
+
+    drawVector(strCtx, 50, centerY, 20, centerY, '#f59e0b', 'T⃗');
+    drawVector(strCtx, strCanvas.width - 50, centerY, strCanvas.width - 20, centerY, '#f59e0b', 'T⃗');
+
+    strCtx.strokeStyle = '#38bdf8';
+    strCtx.lineWidth = 3;
+    strCtx.beginPath();
+    for (let x = 0; x <= L; x++) {
+        const px = startX + x;
+        const py = centerY + 60 * Math.sin((strParams.harmonic * Math.PI * x) / L) * Math.sin(2 * Math.PI * strTime);
+        if (x === 0) strCtx.moveTo(px, py); else strCtx.lineTo(px, py);
+    }
+    strCtx.stroke();
+
+    strCtx.fillStyle = '#ef4444';
+    for (let i = 0; i <= strParams.harmonic; i++) {
+        const nx = startX + (i * L) / strParams.harmonic;
+        strCtx.beginPath();
+        strCtx.arc(nx, centerY, 4, 0, 2 * Math.PI);
+        strCtx.fill();
+    }
+
+    requestAnimationFrame(runString);
+}
+
+// ==================== SIMULATION 2 : MASSE-RESSORT & ÉNERGIES ====================
+const springCanvas = document.getElementById('springCanvas');
+const springCtx = springCanvas.getContext('2d');
+let springParams = { k: 20, m: 0.5, damp: 0.05 };
+let springX = 1.0;
+let springV = 0.0;
+const restLength = 180;
+
+function updateSpringParams() {
+    springParams.k = parseFloat(document.getElementById('springKRange').value);
+    document.getElementById('springKVal').textContent = springParams.k;
+    springParams.m = parseFloat(document.getElementById('springMRange').value);
+    document.getElementById('springMVal').textContent = springParams.m.toFixed(1);
+    springParams.damp = parseFloat(document.getElementById('springDampRange').value);
+    document.getElementById('springDampVal').textContent = springParams.damp.toFixed(2);
+}
+
+function exciterSpring() {
+    springV += 2.5;
+}
+
+function resetSpring() {
+    document.getElementById('springKRange').value = 20;
+    document.getElementById('springMRange').value = 0.5;
+    document.getElementById('springDampRange').value = 0.05;
+    updateSpringParams();
+    springX = 1.0;
+    springV = 0.0;
+}
+
+function runSpring() {
+    springCtx.clearRect(0, 0, springCanvas.width, springCanvas.height);
+
+    const dt = isPaused ? 0.0 : 0.03;
+    const F_elastic = -springParams.k * springX;
+    const F_damp = -springParams.damp * springV;
+    const acceleration = (F_elastic + F_damp) / springParams.m;
+    springV += acceleration * dt;
+    springX += springV * dt;
+
+    const omega0 = Math.sqrt(springParams.k / springParams.m);
+    const T0 = (2 * Math.PI) / omega0;
+
+    const Ec = 0.5 * springParams.m * springV * springV;
+    const Epe = 0.5 * springParams.k * springX * springX;
+    const Em = Ec + Epe;
+
+    document.getElementById('springForcesInfo').textContent = F_elastic.toFixed(1) + ' N';
+    document.getElementById('springDampInfo').textContent = F_damp.toFixed(2) + ' N';
+    document.getElementById('springOmega0').textContent = omega0.toFixed(2) + ' rad/s';
+    document.getElementById('springT0').textContent = T0.toFixed(2) + ' s';
+    document.getElementById('enEm').textContent = Em.toFixed(2) + ' J';
+
+    const wallX = 60;
+    const currentLen = restLength + springX * 80;
+    const massX = wallX + currentLen;
+    const centerY = 130;
+
+    drawRuler(springCtx, 60, 190, 420, 21);
+
+    springCtx.fillStyle = '#64748b';
+    springCtx.fillRect(wallX - 10, centerY - 50, 10, 100);
+
+    springCtx.strokeStyle = '#facc15';
+    springCtx.lineWidth = 3;
+    springCtx.beginPath();
+    springCtx.moveTo(wallX, centerY);
+    const coils = 14;
+    const dx = currentLen / coils;
+    for (let i = 1; i <= coils; i++) {
+        const cx = wallX + (i - 0.5) * dx;
+        const cy = centerY + (i % 2 === 0 ? 12 : -12);
+        springCtx.lineTo(cx, cy);
+    }
+    springCtx.lineTo(massX, centerY);
+    springCtx.stroke();
+
+    springCtx.fillStyle = '#38bdf8';
+    const massWidth = 45;
+    springCtx.fillRect(massX, centerY - 25, massWidth, 50);
+    springCtx.fillStyle = '#090d16';
+    springCtx.font = 'bold 12px sans-serif';
+    springCtx.fillText('m', massX + 18, centerY + 5);
+
+    const centerMassX = massX + massWidth / 2;
+    const fVectorScale = Math.max(-120, Math.min(120, F_elastic * 3.5));
+    drawVector(springCtx, centerMassX, centerY - 8, centerMassX + fVectorScale, centerY - 8, '#f97316', 'F⃗_r');
+
+    const dampScale = Math.max(-80, Math.min(80, F_damp * 12.0));
+    if (Math.abs(dampScale) > 2) {
+        drawVector(springCtx, centerMassX, centerY + 8, centerMassX + dampScale, centerY + 8, '#a855f7', 'f⃗');
+    }
+
+    drawVector(springCtx, centerMassX, centerY + 25, centerMassX, centerY + 70, '#ef4444', 'P⃗');
+    drawVector(springCtx, centerMassX, centerY - 25, centerMassX, centerY - 70, '#22c55e', 'R⃗');
+
+    drawEnergyBars(springCtx, 260, 400, 15.0, [
+        { label: 'Ec', value: Ec, color: '#38bdf8' },
+        { label: 'Epe', value: Epe, color: '#22c55e' },
+        { label: 'Em', value: Em, color: '#f59e0b' }
+    ]);
+
+    requestAnimationFrame(runSpring);
+}
+
+// ==================== SIMULATION 3 : PENDULE SIMPLE & ÉNERGIES ====================
+const pendCanvas = document.getElementById('pendulumCanvas');
+const pendCtx = pendCanvas.getContext('2d');
+let pendParams = { L: 1.5, angle0: 45 * Math.PI / 180, m: 1.0 };
+let theta = pendParams.angle0;
+let omega = 0.0;
+const g = 9.81;
+
+function updatePendParams() {
+    pendParams.L = parseFloat(document.getElementById('pendLRange').value);
+    document.getElementById('pendLVal').textContent = pendParams.L.toFixed(1);
+    const deg = parseFloat(document.getElementById('pendAngleRange').value);
+    document.getElementById('pendAngleVal').textContent = deg;
+    pendParams.angle0 = deg * (Math.PI / 180);
+    theta = pendParams.angle0;
+    omega = 0.0;
+    pendParams.m = parseFloat(document.getElementById('pendMRange').value);
+    document.getElementById('pendMVal').textContent = pendParams.m.toFixed(1);
+}
+
+function runPendulum() {
+    pendCtx.clearRect(0, 0, pendCanvas.width, pendCanvas.height);
+
+    const dt = isPaused ? 0.0 : 0.03;
+    const alpha = -(g / pendParams.L) * Math.sin(theta);
+    omega += alpha * dt;
+    theta += omega * dt;
+
+    const omega0 = Math.sqrt(g / pendParams.L);
+    const T0 = 2 * Math.PI * Math.sqrt(pendParams.L / g);
+
+    const originX = pendCanvas.width / 2;
+    const originY = 40;
+    const scaleLen = pendParams.L * 80;
+
+    const bobX = originX + scaleLen * Math.sin(theta);
+    const bobY = originY + scaleLen * Math.cos(theta);
+
+    const h = pendParams.L * (1 - Math.cos(theta));
+    const currentDeg = theta * (180 / Math.PI);
+
+    const Epp = pendParams.m * g * h;
+    const v = pendParams.L * omega;
+    const Ec = 0.5 * pendParams.m * v * v;
+    const Em = Ec + Epp;
+
+    document.getElementById('pendCurrentAngle').textContent = currentDeg.toFixed(1) + '°';
+    document.getElementById('pendHeight').textContent = h.toFixed(2) + ' m';
+    document.getElementById('pendOmega0').textContent = omega0.toFixed(2) + ' rad/s';
+    document.getElementById('pendT0').textContent = T0.toFixed(2) + ' s';
+    document.getElementById('pendEm').textContent = Em.toFixed(2) + ' J';
+
+    pendCtx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+    pendCtx.lineWidth = 1.5;
+    pendCtx.setLineDash([4, 4]);
+    pendCtx.beginPath();
+    pendCtx.arc(originX, originY, scaleLen, 0, 2 * Math.PI);
+    pendCtx.stroke();
+    pendCtx.setLineDash([]);
+
+    pendCtx.strokeStyle = '#64748b';
+    pendCtx.lineWidth = 2;
+    pendCtx.beginPath();
+    pendCtx.moveTo(originX, originY);
+    pendCtx.lineTo(bobX, bobY);
+    pendCtx.stroke();
+
+    pendCtx.fillStyle = '#64748b';
+    pendCtx.beginPath(); pendCtx.arc(originX, originY, 5, 0, 2 * Math.PI); pendCtx.fill();
+
+    pendCtx.fillStyle = '#38bdf8';
+    pendCtx.beginPath(); pendCtx.arc(bobX, bobY, 14, 0, 2 * Math.PI); pendCtx.fill();
+
+    drawVector(pendCtx, bobX, bobY, bobX, bobY + 55, '#ef4444', 'P⃗');
+
+    const tDirX = originX - bobX;
+    const tDirY = originY - bobY;
+    const tLen = Math.hypot(tDirX, tDirY) || 1;
+    const tNormX = (tDirX / tLen) * 60;
+    const tNormY = (tDirY / tLen) * 60;
+    drawVector(pendCtx, bobX, bobY, bobX + tNormX, bobY + tNormY, '#f59e0b', 'T⃗');
+
+    drawEnergyBars(pendCtx, 260, 400, 35.0, [
+        { label: 'Ec', value: Ec, color: '#38bdf8' },
+        { label: 'Epp', value: Epp, color: '#22c55e' },
+        { label: 'Em', value: Em, color: '#f59e0b' }
+    ]);
+
+    requestAnimationFrame(runPendulum);
+}
+
+runString();
+runSpring();
+runPendulum();
+</script>
+
+</body>
+</html>

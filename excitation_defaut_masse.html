@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Interactive - Excitation, Émission et Défaut de Masse</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        h2 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            margin: 10px 0 5px 0;
+            color: #444;
+            font-size: 1rem;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            background: #fafafa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+            background-color: #007bff;
+            color: white;
+        }
+        button:disabled { opacity: .45; cursor: not-allowed; }
+
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+
+        .info-text {
+            font-size: 0.85rem;
+            color: #555;
+            line-height: 1.5;
+        }
+        .info-text .katex, td .katex, th .katex { font-size: 1em; }
+
+        .legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            color: #444;
+        }
+        .legend span { display: flex; align-items: center; gap: 6px; }
+        .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+
+        /* Table de comparaison intégrée */
+        .mass-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+
+        .mass-table th, .mass-table td {
+            border: 1px solid #e0e0e0;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .mass-table th {
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        .explanation-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .exp-box {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-left: 4px solid #007bff;
+            border-radius: 6px;
+            padding: 12px 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 1. Simulation : Excitation et Désexcitation -->
+        <div class="card">
+            <h2>1. Simulation : excitation et désexcitation atomique</h2>
+            <p class="info-text">
+                Observez l'interaction entre un pinceau lumineux (photon) et un atome, puis l'émission d'une raie spectrale lors du retour de l'électron à son état fondamental. Le diagramme de gauche relie chaque saut d'orbite à l'écart d'énergie <span class="tex" data-tex="\Delta E = E_2-E_1 = h\nu"></span> réellement échangé.
+            </p>
+            <div class="canvas-container">
+                <canvas id="atomicCanvas" width="920" height="300"></canvas>
+            </div>
+            <div class="controls">
+                <button id="btnExcite" onclick="triggerExcitation()">1. Envoyer la lumière (excitation)</button>
+                <button id="btnDeexcite" onclick="triggerDeexcitation()" disabled>2. Retour à l'état fondamental (émission)</button>
+                <button onclick="resetSimulation()" style="background-color: #6c757d;">Réinitialiser</button>
+                <span id="statusLabel" style="font-weight: bold; color: #007bff; margin-left: auto;">État : atome au repos</span>
+            </div>
+            <div class="legend">
+                <span><i class="dot" style="background:#ffeb3b"></i>Photon absorbé (h<i>ν</i>)</span>
+                <span><i class="dot" style="background:#28a745"></i>Photon émis (raie spectrale)</span>
+                <span><i class="dot" style="background:#3399ff"></i>Électron</span>
+            </div>
+        </div>
+
+        <!-- 2. Simulation : Défaut de Masse Nucléaire & Comparaison -->
+        <div class="card" style="border-top: 4px solid #6f42c1;">
+            <h2>2. Simulation & comparaison des masses (noyau d'hélium-4)</h2>
+            <p class="info-text">
+                Visualisez la transition entre des nucléons séparés et un noyau assemblé, accompagnée du tableau comparatif chiffré des masses.
+            </p>
+            <div class="canvas-container">
+                <canvas id="massCanvas" width="920" height="260"></canvas>
+            </div>
+            <div class="controls">
+                <button id="btnAssemble" onclick="triggerMassAssembly()" style="background-color: #6f42c1;">Lancer l'assemblage du noyau</button>
+                <button onclick="resetMassSimulation()" style="background-color: #6c757d;">Séparer les nucléons</button>
+                <span id="massStatusLabel" style="font-weight: bold; color: #6f42c1; margin-left: auto;">État : nucléons isolés</span>
+            </div>
+            <div class="legend">
+                <span><i class="dot" style="background:#ff4d4d"></i>Proton (p⁺)</span>
+                <span><i class="dot" style="background:#3399ff"></i>Neutron (n⁰)</span>
+                <span><i class="dot" style="background:#ffeb3b"></i>Énergie libérée</span>
+            </div>
+
+            <!-- Tableau comparatif intégré -->
+            <table class="mass-table">
+                <thead>
+                    <tr>
+                        <th>État du système</th>
+                        <th>Composition / particules</th>
+                        <th>Masse totale (u)</th>
+                        <th>Statut énergétique</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>État séparé (isolé)</strong></td>
+                        <td>2 protons (<span class="tex" data-tex="2\times1{,}0073\text{ u}"></span>) + 2 neutrons (<span class="tex" data-tex="2\times1{,}0087\text{ u}"></span>)</td>
+                        <td><span id="separatedMassTxt" style="color: #ff4d4d; font-weight: bold;">4,0320 u</span></td>
+                        <td>Masse maximale (sans cohésion)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>État assemblé (noyau)</strong></td>
+                        <td>Noyau d'hélium-4 (<span class="tex" data-tex="{}^4_2\text{He}"></span>)</td>
+                        <td><span id="assembledMassTxt" style="color: #28a745; font-weight: bold;">4,0015 u</span></td>
+                        <td>Masse inférieure (stable)</td>
+                    </tr>
+                    <tr style="background-color: #fdf8ff;">
+                        <td><strong>Défaut de masse (<span class="tex" data-tex="\Delta m"></span>)</strong></td>
+                        <td>Différence : <span class="tex" data-tex="m_{\text{isolés}}-m_{\text{noyau}}"></span></td>
+                        <td><span id="deltaMassTxt" style="color: #6f42c1; font-weight: bold;">0,0305 u</span></td>
+                        <td>Converti en <strong>énergie de liaison</strong> (<span class="tex" data-tex="E=\Delta m\cdot c^2"></span>)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Interprétation Pédagogique -->
+        <div class="card">
+            <h2>Interprétation physique des phénomènes</h2>
+            <div class="explanation-grid">
+                <div class="exp-box" style="border-left-color: #ff9800;">
+                    <h3 style="color: #ff9800;">Excitation par un pinceau de lumière</h3>
+                    <p class="info-text">
+                        Les photons dont l'énergie correspond exactement à l'écart énergétique entre deux niveaux quantiques sont absorbés, provoquant le saut de l'électron vers une orbite externe.
+                    </p>
+                </div>
+
+                <div class="exp-box" style="border-left-color: #28a745;">
+                    <h3 style="color: #28a745;">Désexcitation et émission</h3>
+                    <p class="info-text">
+                        En redescendant vers son état fondamental, l'électron libère un photon unique dont la fréquence correspond au saut quantique, formant les raies d'émission caractéristiques.
+                    </p>
+                </div>
+
+                <div class="exp-box" style="border-left-color: #6f42c1;">
+                    <h3 style="color: #6f42c1;">Le défaut de masse nucléaire</h3>
+                    <p class="info-text">
+                        La masse d'un noyau stable est toujours inférieure à la somme des masses de ses nucléons séparés. Le tableau ci-dessus montre clairement cette diminution de masse (<span class="tex" data-tex="\Delta m=0{,}0305\text{ u}"></span>), reflet direct de l'énergie de liaison qui assure la cohésion du noyau.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function renderTex(){
+            document.querySelectorAll('.tex').forEach(el=>{
+                const t = el.dataset.tex;
+                if(!t) return;
+                try{ katex.render(t, el, {throwOnError:false}); }catch(e){ el.textContent = t; }
+            });
+        }
+        renderTex();
+
+        // --- SIMULATION 1 : ATOME ---
+        const canvasAtomic = document.getElementById('atomicCanvas');
+        const ctxAtomic = canvasAtomic.getContext('2d');
+        const statusLabel = document.getElementById('statusLabel');
+        const btnExcite = document.getElementById('btnExcite');
+        const btnDeexcite = document.getElementById('btnDeexcite');
+
+        let animState = 0; // 0 repos, 1 photon incident, 2 excité, 3 photon émis
+        let photonX = 50;
+        let emittedPhotonX = 460;
+        let electronAngle = 0;
+
+        function triggerExcitation() {
+            if (animState === 0) {
+                animState = 1;
+                photonX = 50;
+                btnExcite.disabled = true;
+                statusLabel.textContent = "État : absorption d'un photon (excitation)";
+            }
+        }
+
+        function triggerDeexcitation() {
+            if (animState === 2) {
+                animState = 3;
+                emittedPhotonX = 460;
+                btnDeexcite.disabled = true;
+                statusLabel.textContent = "État : retour au fondamental (émission)";
+            }
+        }
+
+        function resetSimulation() {
+            animState = 0;
+            photonX = 50;
+            emittedPhotonX = 460;
+            btnExcite.disabled = false;
+            btnDeexcite.disabled = true;
+            statusLabel.textContent = "État : atome au repos";
+        }
+
+        // petit diagramme de niveaux d'énergie, à gauche du canvas
+        function drawEnergyDiagram() {
+            const x0 = 40, e1y = 250, e2y = 120;
+            ctxAtomic.strokeStyle = '#666';
+            ctxAtomic.setLineDash([4,3]);
+            ctxAtomic.lineWidth = 1.5;
+            ctxAtomic.beginPath(); ctxAtomic.moveTo(x0, e1y); ctxAtomic.lineTo(x0+70, e1y); ctxAtomic.stroke();
+            ctxAtomic.beginPath(); ctxAtomic.moveTo(x0, e2y); ctxAtomic.lineTo(x0+70, e2y); ctxAtomic.stroke();
+            ctxAtomic.setLineDash([]);
+            ctxAtomic.fillStyle = '#aaa';
+            ctxAtomic.font = '11px Arial';
+            ctxAtomic.fillText('E₁ (n=1)', x0, e1y + 14);
+            ctxAtomic.fillText('E₂ (n=2)', x0, e2y - 6);
+
+            const dotY = animState >= 2 ? e2y : e1y;
+            ctxAtomic.fillStyle = '#3399ff';
+            ctxAtomic.beginPath(); ctxAtomic.arc(x0+35, dotY, 5, 0, 2*Math.PI); ctxAtomic.fill();
+
+            if (animState === 1 || animState === 3) {
+                const up = animState === 1;
+                const color = up ? '#ffeb3b' : '#28a745';
+                const fromY = up ? e1y : e2y, toY = up ? e2y : e1y;
+                const ax = x0 + 35;
+                ctxAtomic.strokeStyle = color; ctxAtomic.fillStyle = color; ctxAtomic.lineWidth = 2;
+                ctxAtomic.beginPath(); ctxAtomic.moveTo(ax, fromY); ctxAtomic.lineTo(ax, toY); ctxAtomic.stroke();
+                // arrowhead pointing toward toY
+                const dir = up ? -1 : 1, head = 5;
+                ctxAtomic.beginPath();
+                ctxAtomic.moveTo(ax, toY);
+                ctxAtomic.lineTo(ax - head, toY - dir*head);
+                ctxAtomic.lineTo(ax + head, toY - dir*head);
+                ctxAtomic.closePath();
+                ctxAtomic.fill();
+                ctxAtomic.font = 'bold 10px Arial';
+                ctxAtomic.fillText('hν', ax + 10, (fromY + toY) / 2);
+            }
+        }
+
+        function drawAtomicScene() {
+            ctxAtomic.clearRect(0, 0, canvasAtomic.width, canvasAtomic.height);
+
+            const centerX = 460;
+            const centerY = 150;
+
+            drawEnergyDiagram();
+
+            ctxAtomic.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctxAtomic.lineWidth = 1.5;
+            ctxAtomic.beginPath(); ctxAtomic.arc(centerX, centerY, 55, 0, 2 * Math.PI); ctxAtomic.stroke();
+            ctxAtomic.beginPath(); ctxAtomic.arc(centerX, centerY, 105, 0, 2 * Math.PI); ctxAtomic.stroke();
+
+            ctxAtomic.fillStyle = '#888';
+            ctxAtomic.font = '11px Arial';
+            ctxAtomic.fillText("n = 1", centerX - 50, centerY + 70);
+            ctxAtomic.fillText("n = 2", centerX - 40, centerY + 120);
+
+            ctxAtomic.fillStyle = '#ff4d4d';
+            ctxAtomic.beginPath(); ctxAtomic.arc(centerX, centerY, 14, 0, 2 * Math.PI); ctxAtomic.fill();
+
+            let currentRadius = (animState >= 2) ? 105 : 55;
+            let electronX = centerX + currentRadius * Math.cos(electronAngle);
+            let electronY = centerY + currentRadius * Math.sin(electronAngle);
+
+            ctxAtomic.fillStyle = '#3399ff';
+            ctxAtomic.beginPath(); ctxAtomic.arc(electronX, electronY, 6, 0, 2 * Math.PI); ctxAtomic.fill();
+
+            if (animState === 1) {
+                photonX += 6;
+                ctxAtomic.strokeStyle = '#ffeb3b';
+                ctxAtomic.lineWidth = 2;
+                ctxAtomic.beginPath();
+                for (let x = photonX - 30; x <= photonX; x += 2) {
+                    let y = centerY + 12 * Math.sin(x * 0.2);
+                    if (x === photonX - 30) ctxAtomic.moveTo(x, y);
+                    else ctxAtomic.lineTo(x, y);
+                }
+                ctxAtomic.stroke();
+                ctxAtomic.fillStyle = '#ffeb3b';
+                ctxAtomic.fillText("Photon (hν)", photonX - 40, centerY - 20);
+
+                if (photonX >= centerX - 55) {
+                    animState = 2;
+                    btnDeexcite.disabled = false;
+                    statusLabel.textContent = "État : atome excité — cliquez sur 2 pour désexciter";
+                }
+            }
+
+            if (animState === 3) {
+                emittedPhotonX += 6;
+                ctxAtomic.strokeStyle = '#28a745';
+                ctxAtomic.lineWidth = 2;
+                ctxAtomic.beginPath();
+                for (let x = emittedPhotonX - 30; x <= emittedPhotonX; x += 2) {
+                    let y = centerY + 12 * Math.sin(x * 0.2);
+                    if (x === emittedPhotonX - 30) ctxAtomic.moveTo(x, y);
+                    else ctxAtomic.lineTo(x, y);
+                }
+                ctxAtomic.stroke();
+                ctxAtomic.fillStyle = '#28a745';
+                ctxAtomic.fillText("Raie spectrale émise", emittedPhotonX - 50, centerY - 20);
+
+                if (emittedPhotonX > 900) {
+                    animState = 0;
+                    btnExcite.disabled = false;
+                    btnDeexcite.disabled = true;
+                    statusLabel.textContent = "État : atome au repos";
+                }
+            }
+
+            electronAngle += 0.02;
+            requestAnimationFrame(drawAtomicScene);
+        }
+
+        drawAtomicScene();
+
+
+        // --- SIMULATION 2 : DEFAUT DE MASSE ---
+        const canvasMass = document.getElementById('massCanvas');
+        const ctxMass = canvasMass.getContext('2d');
+        const massStatusLabel = document.getElementById('massStatusLabel');
+        const btnAssemble = document.getElementById('btnAssemble');
+
+        let massState = 0;
+        let assemblyProgress = 0;
+        let energyFlash = 0;
+        let massLoopActive = false;
+
+        function triggerMassAssembly() {
+            if (massState === 0) {
+                massState = 1;
+                energyFlash = 1.0;
+                btnAssemble.disabled = true;
+                massStatusLabel.textContent = "Assemblage : libération d'énergie et perte de masse...";
+                startMassLoop();
+            }
+        }
+
+        function resetMassSimulation() {
+            massState = 0;
+            assemblyProgress = 0;
+            energyFlash = 0;
+            btnAssemble.disabled = false;
+            massStatusLabel.textContent = "État : nucléons isolés";
+            startMassLoop();
+        }
+
+        function startMassLoop(){
+            if (!massLoopActive) { massLoopActive = true; requestAnimationFrame(drawMassScene); }
+        }
+
+        function drawMassScene() {
+            ctxMass.clearRect(0, 0, canvasMass.width, canvasMass.height);
+
+            if (massState === 1) {
+                assemblyProgress += 0.03;
+                if (assemblyProgress >= 1) {
+                    assemblyProgress = 1;
+                    massState = 2;
+                    massStatusLabel.textContent = "État : noyau formé (défaut de masse établi)";
+                }
+            }
+
+            const startX1 = 200, startY1 = 90;
+            const startX2 = 280, startY1_2 = 90;
+            const startX3 = 200, startY3 = 170;
+            const startX4 = 280, startY4 = 170;
+
+            const targetX = 460, targetY = 130;
+
+            let x1 = startX1 + (targetX - 18 - startX1) * assemblyProgress;
+            let y1 = startY1 + (targetY - 18 - startY1) * assemblyProgress;
+            let x2 = startX2 + (targetX + 18 - startX2) * assemblyProgress;
+            let y2 = startY1_2 + (targetY - 18 - startY1_2) * assemblyProgress;
+            let x3 = startX3 + (targetX - 18 - startX3) * assemblyProgress;
+            let y3 = startY3 + (targetY + 18 - startY3) * assemblyProgress;
+            let x4 = startX4 + (targetX + 18 - startX4) * assemblyProgress;
+            let y4 = startY4 + (targetY + 18 - startY4) * assemblyProgress;
+
+            // Nucléons
+            ctxMass.fillStyle = '#ff4d4d';
+            ctxMass.beginPath(); ctxMass.arc(x1, y1, 16, 0, 2 * Math.PI); ctxMass.fill();
+            ctxMass.beginPath(); ctxMass.arc(x4, y4, 16, 0, 2 * Math.PI); ctxMass.fill();
+
+            ctxMass.fillStyle = '#3399ff';
+            ctxMass.beginPath(); ctxMass.arc(x2, y2, 16, 0, 2 * Math.PI); ctxMass.fill();
+            ctxMass.beginPath(); ctxMass.arc(x3, y3, 16, 0, 2 * Math.PI); ctxMass.fill();
+
+            ctxMass.fillStyle = '#fff';
+            ctxMass.font = '10px Arial';
+            ctxMass.fillText("p⁺", x1 - 5, y1 + 4);
+            ctxMass.fillText("n⁰", x2 - 5, y2 + 4);
+            ctxMass.fillText("n⁰", x3 - 5, y3 + 4);
+            ctxMass.fillText("p⁺", x4 - 5, y4 + 4);
+
+            // Jauges visuelles
+            ctxMass.fillStyle = '#aaa';
+            ctxMass.font = '11px Arial';
+            ctxMass.fillText("Masse séparée : 4,0320 u", 30, 30);
+            ctxMass.fillText("Masse assemblée : " + (4.0320 - 0.0305 * assemblyProgress).toFixed(4) + " u", 680, 30);
+
+            ctxMass.fillStyle = '#ff4d4d';
+            ctxMass.fillRect(30, 42, 220, 10);
+            ctxMass.fillStyle = '#28a745';
+            let barW = 220 - (45 * assemblyProgress);
+            ctxMass.fillRect(680, 42, barW, 10);
+
+            let stillFlashing = false;
+            if (energyFlash > 0) {
+                ctxMass.fillStyle = `rgba(255, 235, 59, ${energyFlash})`;
+                ctxMass.beginPath();
+                ctxMass.arc(targetX, targetY, 50 * (2 - energyFlash), 0, 2 * Math.PI);
+                ctxMass.fill();
+                energyFlash -= 0.02;
+                stillFlashing = energyFlash > 0;
+
+                ctxMass.fillStyle = '#ffeb3b';
+                ctxMass.font = 'bold 11px Arial';
+                ctxMass.fillText("Énergie libérée E = Δm · c²", targetX - 70, targetY - 50);
+            }
+
+            // n'anime en continu que pendant l'assemblage ou le flash ; sinon dessine une seule fois et s'arrête
+            if (massState === 1 || stillFlashing) {
+                requestAnimationFrame(drawMassScene);
+            } else {
+                massLoopActive = false;
+            }
+        }
+
+        drawMassScene();
+    </script>
+</body>
+</html>

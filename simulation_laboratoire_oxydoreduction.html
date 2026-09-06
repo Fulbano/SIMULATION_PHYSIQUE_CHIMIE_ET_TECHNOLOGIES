@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratoire Virtuel — Oxydoréduction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4f1e8;
+    --paper-line:#ded7c2;
+    --ink:#1c2541;
+    --ink-soft:#5b6584;
+    --panel:#fffdf7;
+    --rule:#d9d2bd;
+    --oxidant:#c65b5b;
+    --reductant:#2f9e6e;
+    --electron:#d98e2c;
+    --scope-bg:#0b1220;
+    --scope-grid:#1c2b45;
+    --scope-text:#dfe8f5;
+    --ok-bg:#e7f5ec; --ok-line:#bfe3cd; --ok-text:#1f6b45;
+    --no-bg:#f8e9e7; --no-line:#eec6c1; --no-text:#8a2f2b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:32px 20px 60px;
+    font-family:'Inter',sans-serif; color:var(--ink);
+    background:
+      linear-gradient(var(--paper-line) 1px, transparent 1px) 0 0/100% 28px,
+      var(--paper);
+    display:flex; flex-direction:column; align-items:center;
+  }
+
+  .masthead{ max-width:1080px; width:100%; margin-bottom:26px; border-bottom:2px solid var(--ink); padding-bottom:14px; }
+  .masthead .kicker{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.04em; color:var(--ink-soft); margin-bottom:6px; }
+  h1{ font-family:'Fraunces',serif; font-weight:600; font-size:2.05rem; margin:0 0 4px; }
+  .subtitle{ color:var(--ink-soft); font-size:1rem; max-width:640px; }
+
+  .container{ max-width:1080px; width:100%; margin-bottom:22px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1.2fr; gap:22px; }
+  @media(max-width:860px){ .grid2{ grid-template-columns:1fr; } }
+
+  .panel{ background:var(--panel); border:1px solid var(--rule); border-radius:6px; padding:22px; }
+
+  h2.section-title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:1.05rem;
+    margin:0 0 14px; padding-bottom:8px; border-bottom:1px solid var(--rule);
+  }
+
+  .select-group{ display:flex; flex-direction:column; margin-bottom:16px; }
+  .select-group label{ font-weight:600; font-size:0.85rem; color:var(--ink-soft); margin-bottom:6px; }
+  select, input[type="number"]{
+    padding:9px 10px; border-radius:4px; border:1px solid var(--rule);
+    font-size:0.92rem; background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif;
+  }
+  select:focus, input:focus{ outline:2px solid var(--electron); outline-offset:1px; }
+
+  .conc-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+  .status-box{
+    padding:12px 14px; border-radius:5px; margin:16px 0; font-size:0.9rem; line-height:1.5;
+  }
+  .status-valid{ background:var(--ok-bg); border:1px solid var(--ok-line); color:var(--ok-text); }
+  .status-invalid{ background:var(--no-bg); border:1px solid var(--no-line); color:var(--no-text); }
+
+  /* --- E° ladder --- */
+  .ladder-wrap{ display:flex; gap:14px; align-items:flex-start; margin-top:10px; }
+  #ladderSvg{ background:var(--scope-bg); border-radius:6px; }
+  .ladder-caption{ font-size:0.78rem; color:var(--ink-soft); line-height:1.6; padding-top:4px; }
+  .ladder-caption .dot{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+
+  /* --- animation stage --- */
+  .stage{
+    position:relative; height:230px; background:var(--scope-bg); border-radius:6px;
+    display:flex; justify-content:space-between; align-items:center; overflow:hidden; margin-top:16px; padding:0 30px;
+  }
+  .stage-grid{ position:absolute; inset:0; opacity:.25; pointer-events:none; }
+  .species{
+    width:132px; height:132px; border-radius:50%; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; color:#fff; font-weight:700; text-align:center;
+    z-index:2; padding:6px; word-break:break-word; font-family:'Inter',sans-serif; font-size:0.92rem;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.08), 0 10px 24px rgba(0,0,0,0.35);
+  }
+  .species small{ display:block; font-family:'IBM Plex Mono',monospace; font-weight:500; font-size:0.68rem; opacity:.85; margin-top:4px; }
+  .reductant-box{ background:var(--reductant); }
+  .oxidant-box{ background:var(--oxidant); }
+  .electron-dot{
+    position:absolute; width:14px; height:14px; background:var(--electron); border-radius:50%;
+    box-shadow:0 0 10px var(--electron); z-index:3; opacity:0;
+  }
+  .flow-label{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:#8fa3c4; z-index:2;
+  }
+
+  /* --- readout --- */
+  .readout{
+    font-family:'IBM Plex Mono',monospace; font-size:0.85rem; line-height:1.9;
+    background:var(--scope-bg); color:var(--scope-text); border-radius:6px; padding:16px 18px; margin-top:16px;
+  }
+  .readout .rline{ display:flex; justify-content:space-between; gap:14px; }
+  .readout .rline + .rline{ margin-top:2px; }
+  .readout .rlabel{ color:#8fa3c4; }
+  .readout .rval{ font-weight:600; text-align:right; }
+  .half-eq{ margin-top:10px; padding-top:10px; border-top:1px dashed #33456b; font-size:0.8rem; color:#c9d6ec; }
+  .half-eq div{ margin-bottom:4px; }
+  .caveat{ font-size:0.72rem; color:#6d7fa3; margin-top:8px; }
+
+  /* --- electrolytes section --- */
+  .eco-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; margin-top:16px; }
+  .eco-card{ background:var(--paper); border:1px solid var(--rule); border-radius:5px; padding:16px; }
+  .eco-card .eco-title{ font-family:'Fraunces',serif; font-weight:600; font-size:0.98rem; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .eco-card ul{ margin:0; padding-left:18px; color:var(--ink-soft); font-size:0.88rem; line-height:1.7; }
+  .eco-card li strong{ color:var(--ink); }
+</style>
+</head>
+<body>
+
+  <div class="masthead">
+    <div class="kicker">CHIMIE DES SOLUTIONS — TRAVAUX PRATIQUES</div>
+    <h1>Laboratoire virtuel d'oxydoréduction</h1>
+    <div class="subtitle">Choisissez un couple oxydant et un couple réducteur pour observer le sens du transfert d'électrons, la réaction bilan équilibrée et la tension du système.</div>
+  </div>
+
+  <div class="container">
+    <div class="grid2">
+
+      <!-- LEFT: setup -->
+      <div class="panel">
+        <h2 class="section-title">Configuration des réactifs</h2>
+
+        <div class="select-group">
+          <label for="oxidantSelect">Oxydant (Ox₁)</label>
+          <select id="oxidantSelect" onchange="updateSimulation()">
+            <optgroup label="Halogènes & oxydants puissants">
+              <option value="F2" data-name="F₂" data-reduced="2F⁻" data-e="2.87" data-n="2">F₂ / F⁻ (E° = +2.87 V)</option>
+              <option value="S2O82-" data-name="S₂O₈²⁻" data-reduced="2SO₄²⁻" data-e="2.01" data-n="2">S₂O₈²⁻ / SO₄²⁻ (E° = +2.01 V)</option>
+              <option value="H2O2_ox" data-name="H₂O₂" data-reduced="2H₂O" data-e="1.78" data-n="2">H₂O₂ / H₂O (E° = +1.78 V)</option>
+              <option value="MnO4-" data-name="MnO₄⁻" data-reduced="Mn²⁺" data-e="1.51" data-n="5">MnO₄⁻ / Mn²⁺ (E° = +1.51 V)</option>
+              <option value="Cl2" data-name="Cl₂" data-reduced="2Cl⁻" data-e="1.36" data-n="2">Cl₂ / Cl⁻ (E° = +1.36 V)</option>
+              <option value="Cr2O72-" data-name="Cr₂O₇²⁻" data-reduced="2Cr³⁺" data-e="1.33" data-n="6">Cr₂O₇²⁻ / Cr³⁺ (E° = +1.33 V)</option>
+              <option value="O2_acid" data-name="O₂" data-reduced="2H₂O" data-e="1.23" data-n="4">O₂ / H₂O [ac] (E° = +1.23 V)</option>
+              <option value="Br2" data-name="Br₂" data-reduced="2Br⁻" data-e="1.07" data-n="2">Br₂ / Br⁻ (E° = +1.07 V)</option>
+              <option value="HNO3_dil" data-name="NO₃⁻" data-reduced="NO" data-e="0.96" data-n="3">NO₃⁻ / NO (E° = +0.96 V)</option>
+            </optgroup>
+            <optgroup label="Métaux & solutions usuelles">
+              <option value="Ag+" data-name="Ag⁺" data-reduced="Ag" data-e="0.80" data-n="1">Ag⁺ / Ag (E° = +0.80 V)</option>
+              <option value="Fe3+" data-name="Fe³⁺" data-reduced="Fe²⁺" data-e="0.77" data-n="1" selected>Fe³⁺ / Fe²⁺ (E° = +0.77 V)</option>
+              <option value="I2" data-name="I₂" data-reduced="2I⁻" data-e="0.54" data-n="2">I₂ / I⁻ (E° = +0.54 V)</option>
+              <option value="Cu2+" data-name="Cu²⁺" data-reduced="Cu" data-e="0.34" data-n="2">Cu²⁺ / Cu (E° = +0.34 V)</option>
+              <option value="H+" data-name="H⁺" data-reduced="H₂" data-e="0.00" data-n="2">H⁺ / H₂ (E° = 0.00 V)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="select-group">
+          <label for="reductantSelect">Réducteur (Red₂)</label>
+          <select id="reductantSelect" onchange="updateSimulation()">
+            <optgroup label="Métaux classiques & réducteurs forts">
+              <option value="Li" data-name="Li" data-oxidized="Li⁺" data-e="-3.04" data-n="1">Li / Li⁺ (E° = -3.04 V)</option>
+              <option value="K" data-name="K" data-oxidized="K⁺" data-e="-2.93" data-n="1">K / K⁺ (E° = -2.93 V)</option>
+              <option value="Na" data-name="Na" data-oxidized="Na⁺" data-e="-2.71" data-n="1">Na / Na⁺ (E° = -2.71 V)</option>
+              <option value="Mg" data-name="Mg" data-oxidized="Mg²⁺" data-e="-2.37" data-n="2">Mg / Mg²⁺ (E° = -2.37 V)</option>
+              <option value="Al" data-name="Al" data-oxidized="Al³⁺" data-e="-1.66" data-n="3">Al / Al³⁺ (E° = -1.66 V)</option>
+              <option value="Zn" data-name="Zn" data-oxidized="Zn²⁺" data-e="-0.76" data-n="2" selected>Zn / Zn²⁺ (E° = -0.76 V)</option>
+              <option value="Fe" data-name="Fe" data-oxidized="Fe²⁺" data-e="-0.44" data-n="2">Fe / Fe²⁺ (E° = -0.44 V)</option>
+              <option value="Cd" data-name="Cd" data-oxidized="Cd²⁺" data-e="-0.40" data-n="2">Cd / Cd²⁺ (E° = -0.40 V)</option>
+              <option value="Ni" data-name="Ni" data-oxidized="Ni²⁺" data-e="-0.26" data-n="2">Ni / Ni²⁺ (E° = -0.26 V)</option>
+              <option value="Pb" data-name="Pb" data-oxidized="Pb²⁺" data-e="-0.13" data-n="2">Pb / Pb²⁺ (E° = -0.13 V)</option>
+            </optgroup>
+            <optgroup label="Réducteurs en solution">
+              <option value="S2O32-" data-name="S₂O₃²⁻" data-oxidized="S₄O₆²⁻" data-e="0.09" data-n="2">S₄O₆²⁻ / S₂O₃²⁻ (E° = +0.09 V)</option>
+              <option value="Fe2+" data-name="Fe²⁺" data-oxidized="Fe³⁺" data-e="0.77" data-n="1">Fe³⁺ / Fe²⁺ (E° = +0.77 V)</option>
+              <option value="I-" data-name="I⁻" data-oxidized="I₂" data-e="0.54" data-n="2">I₂ / I⁻ (E° = +0.54 V)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="conc-row">
+          <div class="select-group">
+            <label for="concOx">[Oxydant] (mol/L)</label>
+            <input type="number" id="concOx" value="1.0" step="0.1" min="0.01" oninput="updateSimulation()">
+          </div>
+          <div class="select-group">
+            <label for="concRed">[Réducteur] (mol/L)</label>
+            <input type="number" id="concRed" value="1.0" step="0.1" min="0.01" oninput="updateSimulation()">
+          </div>
+        </div>
+
+        <h2 class="section-title" style="margin-top:6px;">Échelle des potentiels standards</h2>
+        <div class="ladder-wrap">
+          <svg id="ladderSvg" width="70" height="230"></svg>
+          <div class="ladder-caption">
+            <div><span class="dot" style="background:var(--oxidant);"></span>Couple oxydant choisi — capte les électrons.</div>
+            <div style="margin-top:6px;"><span class="dot" style="background:var(--reductant);"></span>Couple réducteur choisi — cède les électrons.</div>
+            <div style="margin-top:6px;">Les électrons circulent toujours du potentiel le plus bas vers le plus haut.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: simulation -->
+      <div class="panel">
+        <h2 class="section-title">Simulation</h2>
+
+        <div class="status-box status-valid" id="statusMessage">Analyse…</div>
+
+        <div class="stage" id="stage">
+          <svg class="stage-grid" width="100%" height="100%"><defs>
+            <pattern id="gridPattern" width="36" height="36" patternUnits="userSpaceOnUse">
+              <path d="M 36 0 L 0 0 0 36" fill="none" stroke="#1c2b45" stroke-width="1"/>
+            </pattern></defs><rect width="100%" height="100%" fill="url(#gridPattern)"/></svg>
+          <div class="flow-label" id="flowLabel">—</div>
+          <div class="species reductant-box" id="reductantEl">Réducteur<small id="redNameDisplay">Zn</small></div>
+          <div class="species oxidant-box" id="oxidantEl">Oxydant<small id="oxNameDisplay">Fe³⁺</small></div>
+        </div>
+
+        <div class="readout">
+          <div class="rline"><span class="rlabel">E°cell = E°(Ox) − E°(Red)</span><span class="rval" id="eStdVal">—</span></div>
+          <div class="rline"><span class="rlabel">Terme de Nernst</span><span class="rval" id="nernstVal">—</span></div>
+          <div class="rline"><span class="rlabel">Tension du système E</span><span class="rval" id="tensionText">—</span></div>
+          <div class="half-eq" id="halfEqBox"></div>
+          <div class="caveat">Calcul pédagogique simplifié (loi de Nernst à 25 °C, ions H⁺/H₂O du milieu non représentés).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Natural electrolytes -->
+  <div class="container">
+    <div class="panel">
+      <h2 class="section-title">Électrolytes naturels & ingrédients domestiques</h2>
+      <p style="color:var(--ink-soft); font-size:0.92rem; max-width:760px;">
+        Pour une démonstration ou un TP à la maison, les solutions ioniques de laboratoire peuvent être remplacées par des fruits, légumes ou ingrédients ménagers courants contenant des acides ou des ions conducteurs.
+      </p>
+      <div class="eco-grid">
+        <div class="eco-card">
+          <div class="eco-title">🍋 Agrumes & fruits</div>
+          <ul>
+            <li>Le citron & la lime (acide citrique)</li>
+            <li>L'orange & le pamplemousse</li>
+            <li>La pomme Granny Smith (acide malique)</li>
+            <li>Le kiwi & la tomate</li>
+          </ul>
+        </div>
+        <div class="eco-card">
+          <div class="eco-title">🥔 Légumes</div>
+          <ul>
+            <li>La pomme de terre (amidon / acides)</li>
+            <li>Le cornichon au vinaigre</li>
+            <li>Le concombre & l'oignon</li>
+          </ul>
+        </div>
+        <div class="eco-card">
+          <div class="eco-title">🧪 Ingrédients & solutions</div>
+          <ul>
+            <li><strong>Le vinaigre</strong> : acide acétique, très conducteur</li>
+            <li><strong>L'eau salée</strong> : riche en ions Na⁺ et Cl⁻</li>
+            <li><strong>Vinaigre + sel</strong> : mélange puissant pour piles maison</li>
+            <li><strong>Jus de citron en bouteille</strong> : acide citrique concentré</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const E_MIN = -3.5, E_MAX = 3.0;
+
+function gcd(a,b){ return b === 0 ? a : gcd(b, a % b); }
+
+function buildLadder(eOx, eRed){
+  const svg = document.getElementById('ladderSvg');
+  const w = 70, h = 230, x0 = 34;
+  const yOf = e => 12 + (E_MAX - e) / (E_MAX - E_MIN) * (h - 24);
+
+  let html = `<line x1="${x0}" y1="10" x2="${x0}" y2="${h-10}" stroke="#33456b" stroke-width="2"/>`;
+  [3,2,1,0,-1,-2,-3].forEach(v=>{
+    const y = yOf(v);
+    html += `<line x1="${x0-4}" y1="${y}" x2="${x0+4}" y2="${y}" stroke="#5b6584" stroke-width="1"/>`;
+    html += `<text x="${x0-8}" y="${y+3}" text-anchor="end" font-size="8" font-family="IBM Plex Mono, monospace" fill="#8fa3c4">${v}</text>`;
+  });
+
+  const yOxV = yOf(Math.max(Math.min(eOx, E_MAX), E_MIN));
+  const yRedV = yOf(Math.max(Math.min(eRed, E_MAX), E_MIN));
+
+  if (eOx > eRed){
+    html += `<line x1="${x0+14}" y1="${yRedV}" x2="${x0+14}" y2="${yOxV}" stroke="#d98e2c" stroke-width="2" marker-end="url(#arrowhead)"/>`;
+  }
+  html += `<defs><marker id="arrowhead" markerWidth="6" markerHeight="6" refX="3" refY="5" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#d98e2c"/></marker></defs>`;
+
+  html += `<circle cx="${x0}" cy="${yOxV}" r="5" fill="#c65b5b"/>`;
+  html += `<circle cx="${x0}" cy="${yRedV}" r="5" fill="#2f9e6e"/>`;
+
+  svg.innerHTML = html;
+}
+
+function updateSimulation(){
+  const oxSelect = document.getElementById('oxidantSelect');
+  const redSelect = document.getElementById('reductantSelect');
+  const oxOption = oxSelect.options[oxSelect.selectedIndex];
+  const redOption = redSelect.options[redSelect.selectedIndex];
+
+  const oxName = oxOption.getAttribute('data-name');
+  const redName = redOption.getAttribute('data-name');
+  const reducedForm = oxOption.getAttribute('data-reduced');
+  const oxidizedForm = redOption.getAttribute('data-oxidized');
+  const eOx = parseFloat(oxOption.getAttribute('data-e'));
+  const eRed = parseFloat(redOption.getAttribute('data-e'));
+  const n1 = parseInt(oxOption.getAttribute('data-n'));   // electrons gained per Ox1
+  const n2 = parseInt(redOption.getAttribute('data-n'));  // electrons lost per Red2
+
+  const g = gcd(n1, n2);
+  const nTotal = (n1 * n2) / g;   // electrons exchanged once balanced
+  const coefOx = n2 / g;          // multiplier for the oxidant half-reaction
+  const coefRed = n1 / g;         // multiplier for the reductant half-reaction
+
+  const concOx = parseFloat(document.getElementById('concOx').value) || 1.0;
+  const concRed = parseFloat(document.getElementById('concRed').value) || 1.0;
+
+  document.getElementById('redNameDisplay').innerText = redName;
+  document.getElementById('oxNameDisplay').innerText = oxName;
+
+  buildLadder(eOx, eRed);
+
+  const statusBox = document.getElementById('statusMessage');
+  const halfEqBox = document.getElementById('halfEqBox');
+  const flowLabel = document.getElementById('flowLabel');
+  const eStdVal = document.getElementById('eStdVal');
+  const nernstVal = document.getElementById('nernstVal');
+  const tensionText = document.getElementById('tensionText');
+
+  const eStd = eOx - eRed;
+  eStdVal.innerText = `${eStd >= 0 ? '+' : ''}${eStd.toFixed(2)} V`;
+
+  const pref = c => c === 1 ? '' : c + ' ';
+
+  halfEqBox.innerHTML = `
+    <div>Réduction : ${pref(coefOx)}${oxName} + ${nTotal}e⁻ → ${coefOx>1 ? coefOx+'×' : ''}${reducedForm}</div>
+    <div>Oxydation : ${pref(coefRed)}${redName} → ${coefRed>1 ? coefRed+'×' : ''}${oxidizedForm} + ${nTotal}e⁻</div>`;
+
+  if (eStd > 0){
+    statusBox.className = 'status-box status-valid';
+    statusBox.innerHTML = `<strong>Réaction spontanée</strong> — E°(${oxName}/${reducedForm}) > E°(${oxidizedForm}/${redName}). Les électrons circulent de ${redName} vers ${oxName}.`;
+    flowLabel.innerText = `e⁻ : ${redName} → ${oxName}`;
+    startElectronFlow(true);
+
+    const termNernst = (0.0592 / nTotal) * Math.log10(Math.pow(concOx, coefOx) / Math.pow(concRed, coefRed));
+    const eCell = eStd + termNernst;
+    nernstVal.innerText = `${termNernst >= 0 ? '+' : ''}${termNernst.toFixed(3)} V`;
+    tensionText.innerText = `${eCell.toFixed(3)} V`;
+  } else {
+    statusBox.className = 'status-box status-invalid';
+    statusBox.innerHTML = `<strong>Réaction non spontanée</strong> — le potentiel du réducteur (${redName}) est supérieur ou égal à celui de l'oxydant (${oxName}).`;
+    flowLabel.innerText = 'aucun transfert';
+    startElectronFlow(false);
+    nernstVal.innerText = '—';
+    tensionText.innerText = '0.000 V';
+  }
+}
+
+/* ---- responsive electron-transfer animation ---- */
+let electronDots = [];
+let animRunning = false;
+
+function ensureElectronDots(count){
+  const stage = document.getElementById('stage');
+  while (electronDots.length < count){
+    const d = document.createElement('div');
+    d.className = 'electron-dot';
+    stage.appendChild(d);
+    electronDots.push(d);
+  }
+  electronDots.forEach((d,i)=> d.style.display = i < count ? 'block' : 'none');
+}
+
+function startElectronFlow(active){
+  const count = active ? 3 : 0;
+  ensureElectronDots(3);
+  ensureElectronDots(Math.max(count,3));
+  electronDots.forEach((d,i)=>{
+    d.dataset.active = (i < count) ? '1' : '0';
+    d.style.opacity = 0;
+  });
+  if (!animRunning){ animRunning = true; requestAnimationFrame(animateElectrons); }
+}
+
+let flowStart = performance.now();
+function animateElectrons(t){
+  const stage = document.getElementById('stage');
+  const stageRect = stage.getBoundingClientRect();
+  const redRect = document.getElementById('reductantEl').getBoundingClientRect();
+  const oxRect = document.getElementById('oxidantEl').getBoundingClientRect();
+
+  const x1 = redRect.right - stageRect.left - 6;
+  const y1 = redRect.top + redRect.height/2 - stageRect.top - 6;
+  const x2 = oxRect.left - stageRect.left - 6;
+  const y2 = oxRect.top + oxRect.height/2 - stageRect.top - 6;
+
+  const elapsed = (t - flowStart) / 1000;
+  const period = 1.6;
+
+  electronDots.forEach((d, i)=>{
+    if (d.dataset.active !== '1'){ d.style.opacity = 0; return; }
+    let phase = ((elapsed - i * (period/3)) % period + period) % period;
+    let progress = phase / period;
+    const x = x1 + (x2 - x1) * progress;
+    const y = y1 + (y2 - y1) * progress + Math.sin(progress * Math.PI) * -14;
+    d.style.left = x + 'px';
+    d.style.top = y + 'px';
+    d.style.opacity = (progress > 0.03 && progress < 0.97) ? 1 : 0;
+  });
+
+  requestAnimationFrame(animateElectrons);
+}
+
+window.addEventListener('resize', ()=>{});
+window.onload = updateSimulation;
+</script>
+
+</body>
+</html>

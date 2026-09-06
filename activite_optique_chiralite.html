@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Interactive - Activité Optique & Chiralité</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        h2 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            margin: 10px 0 5px 0;
+            color: #444;
+            font-size: 1rem;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            background: #fafafa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+        }
+
+        input[type=range] {
+            width: 100%;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+
+        button.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        button:not(.active) {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .info-text {
+            font-size: 0.85rem;
+            color: #555;
+            line-height: 1.5;
+        }
+        .info-text .katex, .control-row .katex { font-size: 1em; }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white;
+        }
+        .badge-dex { background-color: #ff9800; }
+        .badge-lev { background-color: #9c27b0; }
+
+        .result-box {
+            font-size: 0.85rem;
+            background: #eef6ff;
+            border: 1px solid #cfe4ff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #234;
+            min-width: 220px;
+        }
+        .result-box.extinct { background: #eafff0; border-color: #b7f0c8; color: #1a6b34; font-weight: 700; }
+
+        .legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.82rem;
+            color: #444;
+        }
+        .legend span { display: flex; align-items: center; gap: 6px; }
+        .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+
+        .lists-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .lists-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .list-box {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .list-box ul {
+            margin: 5px 0;
+            padding-left: 20px;
+            font-size: 0.85rem;
+            color: #444;
+            line-height: 1.5;
+        }
+
+        .list-box li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Simulation Card -->
+        <div class="card">
+            <h2>Activité optique : molécules lévogyres et dextrogires</h2>
+            <p class="info-text">
+                Une substance est dite <strong>optiquement active</strong> si elle fait tourner le plan de polarisation de la lumière. 
+                Une molécule <strong>dextrogire (+)</strong> fait tourner le plan vers la droite, une molécule <strong>lévogyre (−)</strong> vers la gauche.
+                Le tube contient la solution active ; réglez son angle de rotation réel puis essayez de le <em>retrouver</em> en tournant l'analyseur jusqu'à l'extinction de la lumière — c'est le principe du polarimètre.
+            </p>
+            <div class="canvas-container">
+                <canvas id="opticalCanvas" width="920" height="300"></canvas>
+            </div>
+            <div class="controls">
+                <button class="mini-btn" id="playBtn" style="background:#007bff;color:#fff;">⏸ Pause</button>
+                <div class="control-group">
+                    <div class="control-row">
+                        <label>Nature de l'énantiomère :</label>
+                    </div>
+                    <div class="btn-group">
+                        <button id="btnDextro" class="active" onclick="setEnantiomer('dextro')">Dextrogire (+)</button>
+                        <button id="btnLevo" onclick="setEnantiomer('levo')">Lévogyre (−)</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-row">
+                        <label for="concentrationSlider">Rotation réelle imposée par la solution (<span class="tex" data-tex="\alpha"></span>)</label>
+                        <span id="angleValue">45</span>°
+                    </div>
+                    <input type="range" id="concentrationSlider" min="10" max="90" step="1" value="45">
+                </div>
+                <div class="control-group">
+                    <div class="control-row">
+                        <label for="analyzerSlider">Orientation de l'analyseur</label>
+                        <span id="analyzerValue">0</span>°
+                    </div>
+                    <input type="range" id="analyzerSlider" min="-90" max="90" step="1" value="0">
+                </div>
+                <div class="control-group">
+                    <div class="control-row">
+                        <label>État actuel :</label>
+                        <span id="stateBadge" class="badge badge-dex">Dextrogire (+)</span>
+                    </div>
+                </div>
+                <div class="result-box" id="resultBox">
+                    Intensité transmise <span class="tex" data-tex="I/I_0="></span> <b id="intensityValue">100</b>%
+                </div>
+                <div class="result-box" style="min-width:280px;">
+                    <div><span class="tex" data-tex="I_0"></span> : intensité juste après le polariseur (référence)</div>
+                    <div style="margin-top:4px;"><span class="tex" data-tex="I = I_0\cos^2(\beta-\alpha)"></span></div>
+                    <div style="margin-top:4px;" id="formulaSubst"></div>
+                </div>
+            </div>
+            <div class="legend">
+                <span><i class="dot" style="background:#ffeb3b"></i>Lumière naturelle</span>
+                <span><i class="dot" style="background:#ff4d4d"></i>Polarisée (avant rotation)</span>
+                <span><i class="dot" style="background:#ff9800"></i>Plan tourné — dextrogire</span>
+                <span><i class="dot" style="background:#ab47bc"></i>Plan tourné — lévogyre</span>
+            </div>
+        </div>
+
+        <!-- Molecules Classification Card -->
+        <div class="card">
+            <h2>Classification et interprétation moléculaire</h2>
+            <p class="info-text">
+                L'activité optique dépend de la structure tridimensionnelle de la molécule et de son caractère <strong>chiral</strong> (asymétrique).
+            </p>
+            
+            <div class="lists-container">
+                <!-- Molécules Actives -->
+                <div class="list-box" style="border-left: 4px solid #28a745;">
+                    <h3 style="color: #28a745;">1. Molécules optiquement actives (chirales)</h3>
+                    <ul>
+                        <li>
+                            <strong>Acide lactique :</strong> possède un carbone asymétrique (<span class="tex" data-tex="C^*"></span>, lié à 4 groupements différents). Ses deux énantiomères font dévier la lumière de façon opposée.
+                        </li>
+                        <li>
+                            <strong>D-Glucose (dextrose) :</strong> sucre naturellement dextrogire doté de plusieurs carbones asymétriques orientant fortement le plan de polarisation.
+                        </li>
+                        <li>
+                            <strong>Carvone :</strong> l'énantiomère (+) sent le carvi et l'énantiomère (−) sent la menthe. Chacun possède une activité optique distincte.
+                        </li>
+                    </ul>
+                    <p class="info-text" style="margin-top: 10px;">
+                        <strong>Interprétation :</strong> ces molécules n'ont <em>aucun plan ni centre de symétrie</em>. Lorsqu'elles interagissent avec l'onde électromagnétique, les composantes du champ électrique subissent un déphasage asymétrique, provoquant la rotation visible du plan de polarisation.
+                    </p>
+                </div>
+
+                <!-- Molécules Inactives -->
+                <div class="list-box" style="border-left: 4px solid #dc3545;">
+                    <h3 style="color: #dc3545;">2. Molécules optiquement inactives (achirales ou racémiques)</h3>
+                    <ul>
+                        <li>
+                            <strong>Glycine :</strong> le plus simple des acides aminés. Son carbone central est lié à deux atomes d'hydrogène identiques : il n'y a pas de carbone asymétrique.
+                        </li>
+                        <li>
+                            <strong>Acide mésotartrique :</strong> possède des carbones asymétriques, mais la molécule a un <em>plan de symétrie interne</em>.
+                        </li>
+                        <li>
+                            <strong>Mélange racémique :</strong> mélange 50/50 d'un énantiomère dextrogire et lévogyre (compensation externe).
+                        </li>
+                    </ul>
+                    <p class="info-text" style="margin-top: 10px;">
+                        <strong>Interprétation :</strong> l'absence d'asymétrie globale (ou la compensation exacte des effets optiques contraires entre molécules miroirs) fait que les rotations s'annulent mutuellement. Le plan de polarisation ressort strictement inchangé.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function renderTex(){
+            document.querySelectorAll('.tex').forEach(el=>{
+                const t = el.dataset.tex;
+                if(!t) return;
+                try{ katex.render(t, el, {throwOnError:false}); }catch(e){ el.textContent = t; }
+            });
+        }
+        renderTex();
+
+        const canvas = document.getElementById('opticalCanvas');
+        const ctx = canvas.getContext('2d');
+        const concentrationSlider = document.getElementById('concentrationSlider');
+        const angleValueSpan = document.getElementById('angleValue');
+        const analyzerSlider = document.getElementById('analyzerSlider');
+        const analyzerValueSpan = document.getElementById('analyzerValue');
+        const btnDextro = document.getElementById('btnDextro');
+        const btnLevo = document.getElementById('btnLevo');
+        const stateBadge = document.getElementById('stateBadge');
+        const intensityValue = document.getElementById('intensityValue');
+        const resultBox = document.getElementById('resultBox');
+        const playBtn = document.getElementById('playBtn');
+
+        let currentType = 'dextro';
+        let time = 0;
+        let running = true;
+
+        playBtn.addEventListener('click', () => {
+            running = !running;
+            playBtn.textContent = running ? '⏸ Pause' : '▶ Reprendre';
+            playBtn.style.background = running ? '#007bff' : '#f0ad4e';
+            if (running) requestAnimationFrame(drawScene);
+        });
+
+        function setEnantiomer(type) {
+            currentType = type;
+            if (type === 'dextro') {
+                btnDextro.classList.add('active');
+                btnLevo.classList.remove('active');
+                stateBadge.textContent = "Dextrogire (+)";
+                stateBadge.className = "badge badge-dex";
+            } else {
+                btnLevo.classList.add('active');
+                btnDextro.classList.remove('active');
+                stateBadge.textContent = "Lévogyre (−)";
+                stateBadge.className = "badge badge-lev";
+            }
+            if (!running) drawScene();
+        }
+
+        // Orientations aléatoires figées pour représenter la lumière non polarisée (avant le 1er polariseur)
+        const unpolarizedAngles = Array.from({length: 9}, () => Math.random() * Math.PI);
+
+        function drawScene() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerY = height / 2;
+            ctx.clearRect(0, 0, width, height);
+
+            const targetAngleDeg = parseInt(concentrationSlider.value);
+            angleValueSpan.textContent = targetAngleDeg;
+            const signedAlphaDeg = targetAngleDeg * (currentType === 'dextro' ? 1 : -1);
+            const maxRotation = signedAlphaDeg * (Math.PI / 180);
+
+            const analyzerDeg = parseInt(analyzerSlider.value);
+            analyzerValueSpan.textContent = analyzerDeg;
+            const analyzerRad = analyzerDeg * (Math.PI / 180);
+
+            // Loi de Malus par rapport au plan réellement tourné par la solution
+            let delta = (analyzerDeg - signedAlphaDeg) * Math.PI / 180;
+            const intensity = Math.pow(Math.cos(delta), 2);
+            intensityValue.textContent = (intensity * 100).toFixed(1);
+            const isExtinct = Math.abs(((analyzerDeg - signedAlphaDeg + 90) % 180 + 180) % 180 - 90) < 2.5 ? false
+                             : Math.abs(intensity) < 0.02;
+            resultBox.classList.toggle('extinct', intensity < 0.02);
+            resultBox.innerHTML = intensity < 0.02
+                ? `✓ Extinction ! Vous avez retrouvé <span class="tex" data-tex="\\alpha \\approx ${analyzerDeg}°"></span>`
+                : `Intensité transmise <span class="tex" data-tex="I/I_0="></span> <b>${(intensity*100).toFixed(1)}</b>%`;
+            renderTex();
+
+            const deltaDeg = (analyzerDeg - signedAlphaDeg);
+            const substTex = `I = I_0\\cos^2(${analyzerDeg}°-(${signedAlphaDeg}°)) = I_0\\cos^2(${deltaDeg}°) = ${(intensity*100).toFixed(1)}\\%\\,I_0`;
+            try{ katex.render(substTex, document.getElementById('formulaSubst'), {throwOnError:false}); }
+            catch(e){ document.getElementById('formulaSubst').textContent = substTex; }
+
+            const xSource = 70;
+            const xPolarizer1 = 190;
+            const xTubeStart = 300;
+            const xTubeEnd = 620;
+            const xAnalyzer = 750;
+
+            // 1. Source de lumière non polarisée : segments à orientations aléatoires
+            ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
+            ctx.lineWidth = 1.5;
+            const zoneXs = [xSource, xSource+30, xSource+60, xSource+90];
+            zoneXs.forEach((x, i) => {
+                unpolarizedAngles.forEach((a, j) => {
+                    if ((i + j) % 2 !== 0) return;
+                    const r = 20;
+                    ctx.beginPath();
+                    ctx.moveTo(x - r*Math.sin(a), centerY - r*Math.cos(a));
+                    ctx.lineTo(x + r*Math.sin(a), centerY + r*Math.cos(a));
+                    ctx.stroke();
+                });
+            });
+            ctx.fillStyle = '#ffeb3b';
+            ctx.font = '11px Arial';
+            ctx.fillText("Lumière naturelle", xSource - 25, centerY - 55);
+
+            // 2. Polariseur fixe (0°)
+            ctx.fillStyle = 'rgba(100, 150, 255, 0.3)';
+            ctx.fillRect(xPolarizer1, 55, 15, 190);
+            ctx.strokeStyle = '#6495ed';
+            ctx.strokeRect(xPolarizer1, 55, 15, 190);
+            ctx.fillStyle = '#333';
+            ctx.fillText("Polariseur (0°)", xPolarizer1 - 20, 265);
+
+            // 3. Tube de polarimètre
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.fillRect(xTubeStart, 75, xTubeEnd - xTubeStart, 150);
+            ctx.strokeStyle = '#888';
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(xTubeStart, 75, xTubeEnd - xTubeStart, 150);
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#aaa';
+            ctx.fillText("Tube contenant la solution active", xTubeStart + 35, 245);
+
+            // 4. Onde lumineuse : polarisée après le 1er polariseur, tourne progressivement dans le tube
+            const wavelength = 40;
+            const amplitude = 45;
+            for (let x = xPolarizer1; x < xAnalyzer - 10; x += 3) {
+                let currentRotation = 0;
+                if (x >= xTubeStart && x <= xTubeEnd) {
+                    let progress = (x - xTubeStart) / (xTubeEnd - xTubeStart);
+                    currentRotation = maxRotation * progress;
+                } else if (x > xTubeEnd) {
+                    currentRotation = maxRotation;
+                }
+
+                let phase = (2 * Math.PI / wavelength) * x - time * 4;
+                let envelope = amplitude * Math.sin(phase);
+
+                let yVal = envelope * Math.cos(currentRotation);
+                let zVal = envelope * Math.sin(currentRotation);
+                let screenY = centerY - yVal + zVal * 0.4;
+
+                ctx.strokeStyle = x < xTubeStart ? '#ff4d4d' : (currentType === 'dextro' ? '#ff9800' : '#ab47bc');
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, centerY + zVal * 0.4);
+                ctx.lineTo(x, screenY);
+                ctx.stroke();
+            }
+
+            // 5. Après l'analyseur : lumière transmise, orientée le long de l'AXE DE L'ANALYSEUR, amplitude en cos(delta)
+            const transmittedAmp = amplitude * Math.cos(delta);
+            const dir = { x: -Math.sin(analyzerRad), y: Math.cos(analyzerRad) };
+            ctx.strokeStyle = '#ff4d4d';
+            ctx.lineWidth = 2;
+            for (let x = xAnalyzer + 15; x < width - 15; x += 22) {
+                const a = Math.abs(transmittedAmp);
+                ctx.beginPath();
+                ctx.moveTo(x - dir.x*a, centerY - dir.y*a);
+                ctx.lineTo(x + dir.x*a, centerY + dir.y*a);
+                ctx.stroke();
+            }
+
+            // 6. Analyseur mobile (orientation choisie par l'utilisateur, indépendante de alpha)
+            ctx.save();
+            ctx.translate(xAnalyzer, centerY);
+            ctx.rotate(analyzerRad);
+            ctx.fillStyle = 'rgba(255, 150, 100, 0.3)';
+            ctx.fillRect(-8, -85, 16, 170);
+            ctx.strokeStyle = '#ff9800';
+            ctx.strokeRect(-8, -85, 16, 170);
+            ctx.strokeStyle = '#a85200';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, -70);
+            ctx.lineTo(0, 70);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.fillStyle = '#333';
+            ctx.fillText(`Analyseur (${analyzerDeg}°)`, xAnalyzer - 30, 265);
+
+            // Texte indicateur dynamique (rotation réelle de la solution)
+            ctx.fillStyle = currentType === 'dextro' ? '#ff9800' : '#ab47bc';
+            ctx.font = 'bold 12px Arial';
+            let rotText = currentType === 'dextro' ? `Rotation réelle : DROITE (+${targetAngleDeg}°)` : `Rotation réelle : GAUCHE (−${targetAngleDeg}°)`;
+            ctx.fillText(rotText, xTubeEnd + 10, 45);
+
+            if (running) {
+                time += 0.03;
+                requestAnimationFrame(drawScene);
+            }
+        }
+
+        concentrationSlider.addEventListener('input', () => { if(!running) drawScene(); });
+        analyzerSlider.addEventListener('input', () => { if(!running) drawScene(); });
+        drawScene();
+    </script>
+</body>
+</html>

@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur de Titrage - Quantités Dynamiques</title>
+    <style>
+        /* ==========================================
+           1. STYLES CSS (Style Laboratoire Moderne)
+           ========================================== */
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --text-color: #f8fafc;
+            --border-color: #334155;
+            --beaker-glass: rgba(255, 255, 255, 0.12);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 1150px;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 850px) {
+            .workspace { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .panel h2 {
+            font-size: 1.05rem;
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: var(--accent-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .control-group label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        select, input[type=number] {
+            background-color: #0f172a;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--accent-color);
+        }
+
+        /* Vue graphique et laboratoire */
+        .simulation-view {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 15px;
+            background-color: #020617;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .lab-setup {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            position: relative;
+            height: 380px;
+            background: #090d16;
+            border-radius: 6px;
+            padding: 10px;
+            border: 1px solid #1e293b;
+        }
+
+        .burette {
+            width: 12px;
+            height: 180px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid #94a3b8;
+            border-bottom: none;
+            position: relative;
+        }
+
+        .burette-liquid {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(56, 189, 248, 0.5);
+            transition: height 0.1s;
+        }
+
+        .burette-stopcock {
+            width: 24px;
+            height: 8px;
+            background: #475569;
+            margin-bottom: 20px;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+
+        .beaker {
+            width: 90px;
+            height: 100px;
+            border: 2px solid #94a3b8;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            position: relative;
+            background: var(--beaker-glass);
+            overflow: hidden;
+        }
+
+        .beaker-liquid {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 50%;
+            background-color: #e2e8f0;
+            transition: background-color 0.3s, height 0.1s;
+        }
+
+        .drop {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #38bdf8;
+            border-radius: 50%;
+            top: 210px;
+            opacity: 0;
+        }
+
+        .drop.animate {
+            animation: fall 0.3s linear;
+        }
+
+        @keyframes fall {
+            0% { top: 210px; opacity: 1; }
+            100% { top: 280px; opacity: 0; }
+        }
+
+        /* Boutons */
+        .btn {
+            background-color: #0284c7;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            width: 100%;
+            margin-top: 5px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background-color: #0369a1; }
+        .btn-secondary { background-color: #475569; }
+        .btn-secondary:hover { background-color: #334155; }
+        .btn-warning { background-color: #d97706; }
+        .btn-warning:hover { background-color: #b45309; }
+
+        /* Dashboard de résultats et quantités dynamiques */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .metric-card {
+            background-color: #0f172a;
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-color);
+            text-align: center;
+        }
+
+        .metric-card .title { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; }
+        .metric-card .value { font-size: 1.05rem; font-weight: bold; margin-top: 4px; }
+        .metric-card.highlight { border-left-color: #f59e0b; }
+
+        /* Modal Diagnostic IA */
+        .diagnostic-box {
+            background-color: #1e1b4b;
+            border: 1px solid #6366f1;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .diagnostic-box h3 { margin: 0 0 5px 0; font-size: 0.95rem; color: #a5b4fc; }
+        .diagnostic-box p { margin: 0 0 10px 0; font-size: 0.85rem; color: #c7d2fe; }
+    </style>
+</head>
+<body>
+
+    <h1>Simulateur de Titrage Acide-Base & Suivi Dynamique</h1>
+
+    <div class="main-container">
+        <div class="workspace">
+            <div class="panel">
+                <h2>Paramètres du Titrage</h2>
+
+                <div class="control-group">
+                    <label for="selectAcid">Acide (dans le bécher) :</label>
+                    <select id="selectAcid">
+                        <option value="HCl">HCl (Acide fort)</option>
+                        <option value="CH3COOH">CH3COOH (Acide faible, pKa=4.76)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="selectBase">Base (dans la burette) :</label>
+                    <select id="selectBase">
+                        <option value="NaOH">NaOH (Base forte)</option>
+                        <option value="NH3">NH3 (Base faible, pKa=9.25)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="inputCa">Concentration Acide Ca (M) : <span id="valCa">0.05</span></label>
+                    <input type="range" id="inputCa" min="0.01" max="0.1" step="0.01" value="0.05">
+                </div>
+
+                <div class="control-group">
+                    <label for="inputVa">Volume Acide Va (mL) : <span id="valVa">20</span></label>
+                    <input type="range" id="inputVa" min="10" max="50" step="5" value="20">
+                </div>
+
+                <div class="control-group">
+                    <label for="inputCb">Concentration Base Cb (M) : <span id="valCb">0.05</span></label>
+                    <input type="range" id="inputCb" min="0.01" max="0.1" step="0.01" value="0.05">
+                </div>
+
+                <div class="control-group">
+                    <label for="selectIndicator">Indicateur coloré :</label>
+                    <select id="selectIndicator">
+                        <option value="BBT">Bleu de Bromothymol (6.0 - 7.6)</option>
+                        <option value="NET">Phénolphtaléine (8.2 - 10.0)</option>
+                        <option value="RM">Rouge de Méthyle (4.4 - 6.2)</option>
+                    </select>
+                </div>
+
+                <button id="btnAddDrop" class="btn">Ajouter une goutte (+0.05 mL)</button>
+                <button id="btnAdd5mL" class="btn btn-secondary">Verser +1.0 mL</button>
+                <button id="btnReset" class="btn btn-secondary">Réinitialiser l'expérience</button>
+                <button id="btnDiagnostic" class="btn btn-warning">Activer Mode Diagnostic IA</button>
+            </div>
+
+            <div class="simulation-view">
+                <div class="lab-setup">
+                    <div class="burette">
+                        <div id="buretteLiquid" class="burette-liquid" style="height: 80%;"></div>
+                    </div>
+                    <div id="stopcock" class="burette-stopcock"></div>
+                    <div id="drop" class="drop"></div>
+                    <div class="beaker">
+                        <div id="beakerLiquid" class="beaker-liquid"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <canvas id="titrationCanvas" width="500" height="380"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="title">Volume Versé (Vb)</div>
+                <div class="value" id="resVb">0.00 mL</div>
+            </div>
+            <div class="metric-card">
+                <div class="title">pH Actuel</div>
+                <div class="value" id="respH">7.00</div>
+            </div>
+            <div class="metric-card highlight">
+                <div class="title">n(Acide initial)</div>
+                <div class="value" id="resNa">1.00 mmol</div>
+            </div>
+            <div class="metric-card highlight">
+                <div class="title">n(Base versée)</div>
+                <div class="value" id="resNb">0.00 mmol</div>
+            </div>
+            <div class="metric-card">
+                <div class="title">Volume Équivalence (Veq)</div>
+                <div class="value" id="resVeq">-- mL</div>
+            </div>
+            <div class="metric-card">
+                <div class="title">pH à l'Équivalence</div>
+                <div class="value" id="resPHeq">--</div>
+            </div>
+        </div>
+
+        <div id="diagnosticBox" class="diagnostic-box">
+            <h3>🤖 Diagnostic IA : Anomalie Détectée !</h3>
+            <p id="diagnosticMsg">Une erreur expérimentale a été introduite.</p>
+            <button id="btnResolveDiag" class="btn" style="width:auto;">Résoudre le diagnostic</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 2. MOTEUR CHIMIQUE ET VARIABLES DYNAMIQUES
+        // ==========================================
+
+        const pKa_CH3COOH = 4.76;
+        const pKa_NH4 = 9.25;
+
+        // Éléments DOM
+        const canvas = document.getElementById('titrationCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const selectAcid = document.getElementById('selectAcid');
+        const selectBase = document.getElementById('selectBase');
+        const inputCa = document.getElementById('inputCa');
+        const inputVa = document.getElementById('inputVa');
+        const inputCb = document.getElementById('inputCb');
+        const selectIndicator = document.getElementById('selectIndicator');
+
+        const btnAddDrop = document.getElementById('btnAddDrop');
+        const btnAdd5mL = document.getElementById('btnAdd5mL');
+        const btnReset = document.getElementById('btnReset');
+        const btnDiagnostic = document.getElementById('btnDiagnostic');
+
+        const beakerLiquid = document.getElementById('beakerLiquid');
+        const drop = document.getElementById('drop');
+        const diagnosticBox = document.getElementById('diagnosticBox');
+
+        // État dynamique de la simulation
+        let Vb = 0.0;
+        let history = [];
+        let currentDropSize = 0.05;
+        let anomalyActive = false;
+        let activeAnomalyType = null;
+
+        // ------------------------------------------
+        // Calcul Dynamique du pH
+        // ------------------------------------------
+        function calculatepH(Vb_added) {
+            let Ca = parseFloat(inputCa.value);
+            let Va = parseFloat(inputVa.value);
+            let Cb = parseFloat(inputCb.value);
+            const acidType = selectAcid.value;
+            const baseType = selectBase.value;
+
+            if (anomalyActive && activeAnomalyType === 'CONCENTRATION_ERR') {
+                Cb = Cb * 1.8; // Erreur masquée de concentration
+            }
+
+            const nA = Ca * Va; // mmoles
+            const nB = Cb * Vb_added; // mmoles
+            const Vtotal = Va + Vb_added; // mL
+
+            let pH = 7.0;
+
+            if (acidType === 'HCl' && baseType === 'NaOH') {
+                if (nB < nA) {
+                    pH = -Math.log10((nA - nB) / Vtotal);
+                } else if (Math.abs(nB - nA) < 1e-6) {
+                    pH = 7.0;
+                } else {
+                    pH = 14 + Math.log10((nB - nA) / Vtotal);
+                }
+            } else if (acidType === 'CH3COOH' && baseType === 'NaOH') {
+                if (Vb_added === 0) {
+                    pH = 0.5 * (pKa_CH3COOH - Math.log10(Ca));
+                } else if (nB < nA) {
+                    pH = pKa_CH3COOH + Math.log10(nB / (nA - nB));
+                } else if (Math.abs(nB - nA) < 1e-6) {
+                    pH = 0.5 * (14 + pKa_CH3COOH + Math.log10(nA / Vtotal));
+                } else {
+                    pH = 14 + Math.log10((nB - nA) / Vtotal);
+                }
+            } else if (acidType === 'HCl' && baseType === 'NH3') {
+                if (nB < nA) {
+                    pH = -Math.log10((nA - nB) / Vtotal);
+                } else if (Math.abs(nB - nA) < 1e-6) {
+                    pH = 0.5 * (pKa_NH4 - Math.log10(nA / Vtotal));
+                } else {
+                    pH = pKa_NH4 + Math.log10((nB - nA) / nA);
+                }
+            } else {
+                if (nB < nA) {
+                    pH = pKa_CH3COOH + Math.log10(nB / (nA - nB));
+                } else if (Math.abs(nB - nA) < 1e-6) {
+                    pH = 0.5 * (pKa_CH3COOH + pKa_NH4);
+                } else {
+                    pH = pKa_NH4 + Math.log10((nB - nA) / nA);
+                }
+            }
+
+            return Math.min(Math.max(pH, 0.5), 13.5);
+        }
+
+        // ------------------------------------------
+        // Couleur dynamique de l'indicateur
+        // ------------------------------------------
+        function getIndicatorColor(pH) {
+            const ind = selectIndicator.value;
+            if (ind === 'BBT') {
+                if (pH < 6.0) return '#facc15';
+                if (pH > 7.6) return '#2563eb';
+                return '#22c55e';
+            } else if (ind === 'NET') {
+                if (pH < 8.2) return 'rgba(241, 245, 249, 0.3)';
+                if (pH > 10.0) return '#e11d48';
+                return '#f472b6';
+            } else if (ind === 'RM') {
+                if (pH < 4.4) return '#ef4444';
+                if (pH > 6.2) return '#facc15';
+                return '#fb923c';
+            }
+            return '#38bdf8';
+        }
+
+        // ------------------------------------------
+        // Tracé Dynamique Canvas
+        // ------------------------------------------
+        function drawChart() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+            const width = canvas.width - margin.left - margin.right;
+            const height = canvas.height - margin.top - margin.bottom;
+
+            const Ca = parseFloat(inputCa.value);
+            const Va = parseFloat(inputVa.value);
+            const Cb = parseFloat(inputCb.value);
+            const Veq = (Ca * Va) / Cb;
+            const maxVb = Math.max(Veq * 2, 40);
+
+            // Axes
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(margin.left, margin.top);
+            ctx.lineTo(margin.left, canvas.height - margin.bottom);
+            ctx.lineTo(canvas.width - margin.right, canvas.height - margin.bottom);
+            ctx.stroke();
+
+            // Grille et graduations
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'right';
+
+            for (let ph = 0; ph <= 14; ph += 2) {
+                const y = margin.top + height - (ph / 14) * height;
+                ctx.fillText(ph.toString(), margin.left - 5, y + 3);
+                ctx.strokeStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.moveTo(margin.left, y);
+                ctx.lineTo(canvas.width - margin.right, y);
+                ctx.stroke();
+            }
+
+            ctx.textAlign = 'center';
+            for (let v = 0; v <= maxVb; v += 10) {
+                const x = margin.left + (v / maxVb) * width;
+                ctx.fillText(v.toString() + ' mL', x, canvas.height - margin.bottom + 15);
+            }
+
+            // Équivalence
+            const pHEq = calculatepH(Veq);
+            const eqX = margin.left + (Veq / maxVb) * width;
+            const eqY = margin.top + height - (pHEq / 14) * height;
+
+            ctx.strokeStyle = '#f59e0b';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(eqX, canvas.height - margin.bottom);
+            ctx.lineTo(eqX, eqY);
+            ctx.lineTo(margin.left, eqY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(eqX, eqY, 5, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Courbe dynamic
+            if (history.length > 0) {
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+
+                history.forEach((pt, idx) => {
+                    const x = margin.left + (pt.Vb / maxVb) * width;
+                    const y = margin.top + height - (pt.pH / 14) * height;
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+            }
+
+            document.getElementById('resVeq').textContent = `${Veq.toFixed(2)} mL`;
+            document.getElementById('resPHeq').textContent = pHEq.toFixed(2);
+        }
+
+        // ------------------------------------------
+        // Mise à jour complète de l'interface & Quantités
+        // ------------------------------------------
+        function updateSimulation() {
+            const Ca = parseFloat(inputCa.value);
+            const Va = parseFloat(inputVa.value);
+            const Cb = parseFloat(inputCb.value);
+
+            // Calculs dynamiques de matière
+            const nA = Ca * Va; // mmoles
+            const nB = Cb * Vb; // mmoles
+            const curpH = calculatepH(Vb);
+
+            // Mise à jour de l'historique
+            if (history.length === 0 || history[history.length - 1].Vb !== Vb) {
+                history.push({ Vb: Vb, pH: curpH });
+            }
+
+            // Mise à jour des cartes de valeurs dynamiques
+            document.getElementById('resVb').textContent = `${Vb.toFixed(2)} mL`;
+            document.getElementById('respH').textContent = curpH.toFixed(2);
+            document.getElementById('resNa').textContent = `${nA.toFixed(2)} mmol`;
+            document.getElementById('resNb').textContent = `${nB.toFixed(2)} mmol`;
+
+            // Réaction visuelle du liquide dans le bécher
+            beakerLiquid.style.backgroundColor = getIndicatorColor(curpH);
+            const heightPercent = Math.min(30 + ((Va + Vb) / 100) * 50, 85);
+            beakerLiquid.style.height = `${heightPercent}%`;
+
+            drawChart();
+        }
+
+        function triggerDropAnimation(volumeToAdd) {
+            drop.classList.add('animate');
+            setTimeout(() => {
+                drop.classList.remove('animate');
+                Vb += volumeToAdd;
+                updateSimulation();
+            }, 300);
+        }
+
+        function resetSimulation() {
+            Vb = 0.0;
+            history = [];
+            document.getElementById('valCa').textContent = inputCa.value;
+            document.getElementById('valVa').textContent = inputVa.value;
+            document.getElementById('valCb').textContent = inputCb.value;
+            updateSimulation();
+        }
+
+        // ------------------------------------------
+        // Diagnostic IA
+        // ------------------------------------------
+        function activateDiagnosticMode() {
+            anomalyActive = true;
+            const anomalies = ['DROP_SIZE_LARGE', 'CONCENTRATION_ERR'];
+            activeAnomalyType = anomalies[Math.floor(Math.random() * anomalies.length)];
+
+            diagnosticBox.style.display = 'block';
+
+            if (activeAnomalyType === 'DROP_SIZE_LARGE') {
+                currentDropSize = 0.5;
+                document.getElementById('diagnosticMsg').textContent = 
+                    "Anomalie active : La burette verse des gouttes anormale par clic. Observez la courbe !";
+            } else if (activeAnomalyType === 'CONCENTRATION_ERR') {
+                currentDropSize = 0.05;
+                document.getElementById('diagnosticMsg').textContent = 
+                    "Anomalie active : Le volume d'équivalence réel est décalé par rapport à la concentration Cb affichée.";
+            }
+            resetSimulation();
+        }
+
+        document.getElementById('btnResolveDiag').addEventListener('click', () => {
+            if (activeAnomalyType === 'DROP_SIZE_LARGE') {
+                alert("Bravo ! Goutte de 0.5 mL au lieu de 0.05 mL.");
+            } else {
+                alert("Bravo ! La concentration réelle de la base est différente de celle configurée.");
+            }
+            anomalyActive = false;
+            currentDropSize = 0.05;
+            diagnosticBox.style.display = 'none';
+            resetSimulation();
+        });
+
+        // Event Listeners
+        btnAddDrop.addEventListener('click', () => triggerDropAnimation(currentDropSize));
+        btnAdd5mL.addEventListener('click', () => triggerDropAnimation(1.0));
+        btnReset.addEventListener('click', resetSimulation);
+        btnDiagnostic.addEventListener('click', activateDiagnosticMode);
+
+        [inputCa, inputVa, inputCb, selectAcid, selectBase, selectIndicator].forEach(elem => {
+            elem.addEventListener('change', resetSimulation);
+            elem.addEventListener('input', resetSimulation);
+        });
+
+        // Premier rendu
+        resetSimulation();
+    </script>
+</body>
+</html>

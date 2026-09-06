@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulation dynamique - Alternateur : deux phases</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --border:#334155;
+    --text:#e2e8f0; --muted:#94a3b8; --accent:#3b82f6;
+    --green:#10b981; --amber:#f59e0b; --coral:#ef4444;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    min-height:100vh; display:flex; flex-direction:column;
+  }
+  header{
+    background:var(--panel); border-bottom:1px solid var(--border);
+    padding:16px 24px;
+  }
+  header h1{margin:0; font-size:19px; font-weight:600;}
+  header p{margin:4px 0 0; font-size:13px; color:var(--muted);}
+  main{
+    max-width:1100px; margin:0 auto; width:100%; padding:20px;
+    display:grid; grid-template-columns:280px 1fr; gap:20px;
+  }
+  @media (max-width:800px){ main{grid-template-columns:1fr;} }
+  .panel{
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:18px;
+  }
+  .phase-bar{
+    display:flex; gap:8px; margin-bottom:16px;
+  }
+  .phase-btn{
+    flex:1; padding:10px 8px; border-radius:8px; border:1px solid var(--border);
+    background:#0f172a; color:var(--muted); font-size:12px; cursor:pointer;
+    text-align:center; transition:all .2s; line-height:1.3;
+  }
+  .phase-btn.active{ border-color:var(--accent); color:#fff; background:#1d3a5f; font-weight:600;}
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-size:13px; color:var(--muted); margin-bottom:6px;}
+  .field label b{color:#fff;}
+  input[type=range]{width:100%; accent-color:var(--accent);}
+  .controls-row{display:flex; gap:8px; margin-top:6px;}
+  button.action{
+    flex:1; padding:9px; border-radius:8px; border:1px solid var(--border);
+    background:#0f172a; color:var(--text); font-size:13px; cursor:pointer;
+  }
+  button.action:hover{border-color:var(--accent);}
+  .readout{
+    margin-top:16px; padding:14px; background:#0b1220; border-radius:10px;
+    border:1px solid var(--border); font-family:ui-monospace,monospace; font-size:13px;
+  }
+  .readout div{display:flex; justify-content:space-between; margin:4px 0;}
+  .readout .lab{color:var(--muted);}
+  .v-val{color:var(--green); font-weight:600;}
+  .i-val{color:var(--amber); font-weight:600;}
+  .bulb-val{font-weight:600;}
+  canvas{width:100%; height:auto; border-radius:10px; background:#0b1220; display:block;}
+  .caption{
+    text-align:center; font-size:13px; color:var(--muted); margin-top:10px;
+  }
+  .caption b{color:#fff;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Simulation dynamique — Production du courant alternatif</h1>
+  <p>Phase 1 : l'aimant tourne devant une bobine fixe &nbsp;→&nbsp; Phase 2 : la bobine tourne à l'intérieur d'un aimant fixe</p>
+</header>
+
+<main>
+  <div class="panel">
+    <div class="phase-bar">
+      <div class="phase-btn active" id="btn-p1" onclick="setPhase(1)">Phase 1<br>Aimant tournant</div>
+      <div class="phase-btn" id="btn-p2" onclick="setPhase(2)">Phase 2<br>Bobine tournante</div>
+    </div>
+
+    <div class="field">
+      <label>Vitesse de rotation (<b id="val-speed">40</b> tr/min)</label>
+      <input type="range" id="slider-speed" min="0" max="120" value="40">
+    </div>
+    <div class="field">
+      <label>Champ magnétique B (<b id="val-b">0.6</b> T)</label>
+      <input type="range" id="slider-b" min="0.1" max="1.5" step="0.1" value="0.6">
+    </div>
+
+    <div class="controls-row">
+      <button class="action" id="btn-play" onclick="togglePlay()">Pause</button>
+      <button class="action" onclick="autoSequence()">Lecture auto (1 → 2)</button>
+    </div>
+
+    <div class="readout">
+      <div><span class="lab">Tension instantanée e(t)</span><span class="v-val" id="out-v">0.00 V</span></div>
+      <div><span class="lab">Intensité instantanée i(t)</span><span class="i-val" id="out-i">0.00 A</span></div>
+      <div><span class="lab">Ampoule</span><span class="bulb-val" id="out-bulb">éteinte</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <canvas id="scene" width="760" height="560"></canvas>
+    <p class="caption" id="caption">
+      <b>Phase 1 :</b> l'aimant (inducteur) tourne au centre. Son champ magnétique variable traverse la bobine fixe (induit) et y crée une force électromotrice induite.
+    </p>
+  </div>
+</main>
+
+<script>
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+let phase = 1;
+let angle = 0;
+let playing = true;
+let history = [];
+const HIST_MAX = 200;
+
+let sequenceRunning = false;
+let sequenceStart = 0;
+
+const speedSlider = document.getElementById('slider-speed');
+const bSlider = document.getElementById('slider-b');
+const valSpeed = document.getElementById('val-speed');
+const valB = document.getElementById('val-b');
+
+speedSlider.addEventListener('input', () => valSpeed.textContent = speedSlider.value);
+bSlider.addEventListener('input', () => valB.textContent = bSlider.value);
+
+function setPhase(p, keepHistory){
+  phase = p;
+  document.getElementById('btn-p1').classList.toggle('active', p===1);
+  document.getElementById('btn-p2').classList.toggle('active', p===2);
+  if(!keepHistory) history = [];
+  const cap = document.getElementById('caption');
+  if(p === 1){
+    cap.innerHTML = "<b>Phase 1 :</b> l'aimant (inducteur) tourne au centre. Son champ magnétique variable traverse la bobine fixe (induit) et y crée une force électromotrice induite.";
+  } else {
+    cap.innerHTML = "<b>Phase 2 :</b> l'aimant reste fixe autour du montage. La bobine (induit) tourne à l'intérieur de son champ : le flux qui la traverse varie, ce qui induit la même tension alternative.";
+  }
+}
+
+function togglePlay(){
+  playing = !playing;
+  document.getElementById('btn-play').textContent = playing ? 'Pause' : 'Reprendre';
+}
+
+function autoSequence(){
+  sequenceRunning = true;
+  sequenceStart = performance.now();
+  playing = true;
+  document.getElementById('btn-play').textContent = 'Pause';
+  setPhase(1, false);
+}
+
+function drawArrowPath(x1,y1,x2,y2,color){
+  ctx.strokeStyle = color; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  const ang = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - 7*Math.cos(ang-0.4), y2 - 7*Math.sin(ang-0.4));
+  ctx.lineTo(x2 - 7*Math.cos(ang+0.4), y2 - 7*Math.sin(ang+0.4));
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
+
+function drawPhase1(cx, cy, ang){
+  // Fixed coil (square winding) around center
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+  ctx.strokeRect(-95, -95, 190, 190);
+  ctx.strokeStyle = 'rgba(59,130,246,0.5)'; ctx.lineWidth = 1.5;
+  for(let i=-80;i<=80;i+=16){
+    ctx.beginPath(); ctx.moveTo(-95,i); ctx.lineTo(95,i); ctx.stroke();
+  }
+  ctx.fillStyle = '#93c5fd'; ctx.font = '13px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('bobine fixe (induit)', 0, -110);
+
+  // field lines emanating outward
+  ctx.strokeStyle = 'rgba(239,68,68,0.35)';
+  for(let k=0;k<6;k++){
+    const a = ang + k*Math.PI/3;
+    const x1 = 55*Math.cos(a), y1 = 55*Math.sin(a);
+    const x2 = 130*Math.cos(a), y2 = 130*Math.sin(a);
+    drawArrowPath(x1,y1,x2,y2,'rgba(239,68,68,0.35)');
+  }
+
+  // Rotating bar magnet
+  ctx.rotate(ang);
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(-50, -18, 50, 36);
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillRect(0, -18, 50, 36);
+  ctx.strokeStyle = '#0b1220'; ctx.lineWidth = 2;
+  ctx.strokeRect(-50, -18, 100, 36);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('N', -25, 6);
+  ctx.fillText('S', 25, 6);
+  ctx.restore();
+
+  ctx.fillStyle = '#64748b'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('aimant tournant (inducteur)', cx, cy+150);
+}
+
+function drawPhase2(cx, cy, ang){
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Fixed outer magnet (two half-rings, N and S)
+  ctx.lineWidth = 22;
+  ctx.strokeStyle = '#ef4444';
+  ctx.beginPath(); ctx.arc(0,0,110, Math.PI*0.75, Math.PI*1.75); ctx.stroke();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.beginPath(); ctx.arc(0,0,110, -Math.PI*0.25, Math.PI*0.75); ctx.stroke();
+  ctx.fillStyle = '#fca5a5'; ctx.font='bold 14px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('N', -95, -95);
+  ctx.fillStyle = '#93c5fd';
+  ctx.fillText('S', 95, 95);
+  ctx.fillStyle = '#94a3b8'; ctx.font='12px sans-serif';
+  ctx.fillText('aimant fixe (inducteur)', 0, -140);
+
+  // field lines across the gap
+  ctx.strokeStyle = 'rgba(148,163,184,0.3)';
+  for(let k=-2;k<=2;k++){
+    ctx.beginPath();
+    ctx.moveTo(-80, k*20);
+    ctx.lineTo(80, k*20);
+    ctx.stroke();
+  }
+
+  // rotating coil at center
+  ctx.rotate(ang);
+  ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3;
+  ctx.strokeRect(-60, -34, 120, 68);
+  ctx.strokeStyle = 'rgba(16,185,129,0.55)'; ctx.lineWidth = 1.5;
+  for(let i=-50;i<=50;i+=14){
+    ctx.beginPath(); ctx.moveTo(i,-34); ctx.lineTo(i,34); ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.fillStyle = '#6ee7b7'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('bobine tournante (induit)', cx, cy+150);
+}
+
+function drawOscilloscope(x, y, w, h){
+  ctx.fillStyle = '#020617'; ctx.strokeStyle = '#334155'; ctx.lineWidth=1;
+  roundRect(x,y,w,h,8); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#1e293b';
+  ctx.beginPath(); ctx.moveTo(x, y+h/2); ctx.lineTo(x+w, y+h/2); ctx.stroke();
+
+  ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.beginPath();
+  const step = w / HIST_MAX;
+  history.forEach((v, i)=>{
+    const px = x + i*step;
+    const py = y + h/2 - v*3.2;
+    if(i===0) ctx.moveTo(px, clampY(py,y,h)); else ctx.lineTo(px, clampY(py,y,h));
+  });
+  ctx.stroke();
+
+  ctx.fillStyle = '#94a3b8'; ctx.font='11px sans-serif'; ctx.textAlign='left';
+  ctx.fillText('Oscilloscope — tension e(t)', x+10, y+18);
+}
+function clampY(v,y,h){ return Math.max(y+6, Math.min(y+h-6, v)); }
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function drawBulb(x,y,vAbs){
+  ctx.save();
+  ctx.translate(x,y);
+  let r, alpha;
+  if(vAbs > 6){ r=26; alpha=0.9; }
+  else if(vAbs > 2){ r=18; alpha=0.5; }
+  else { r=12; alpha=0.15; }
+  ctx.fillStyle = `rgba(250,204,21,${alpha})`;
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#64748b'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle = '#cbd5e1'; ctx.font='11px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('ampoule 6V / 3W', 0, r+18);
+  ctx.restore();
+}
+
+let last = performance.now();
+function loop(now){
+  const dt = Math.min(0.05, (now-last)/1000); last = now;
+
+  if(sequenceRunning){
+    const elapsed = (now - sequenceStart)/1000;
+    if(elapsed < 6){ if(phase!==1) setPhase(1); }
+    else if(elapsed < 12){ if(phase!==2) setPhase(2); }
+    else { sequenceRunning = false; }
+  }
+
+  const rpm = parseFloat(speedSlider.value);
+  const B = parseFloat(bSlider.value);
+  const omega = rpm * 2 * Math.PI / 60; // rad/s
+
+  if(playing){
+    angle += omega * dt;
+  }
+
+  const eMax = B * omega * 9;
+  const e = eMax * Math.sin(angle);
+  const R = 12.0;
+  const i = e / R;
+
+  history.push(e);
+  if(history.length > HIST_MAX) history.shift();
+
+  document.getElementById('out-v').textContent = e.toFixed(2) + ' V';
+  document.getElementById('out-i').textContent = i.toFixed(2) + ' A';
+  const bulbEl = document.getElementById('out-bulb');
+  const vAbs = Math.abs(e);
+  if(vAbs > 6){ bulbEl.textContent = 'allumée (forte)'; bulbEl.style.color = '#f59e0b'; }
+  else if(vAbs > 2){ bulbEl.textContent = 'allumée (faible)'; bulbEl.style.color = '#fde68a'; }
+  else { bulbEl.textContent = 'éteinte'; bulbEl.style.color = '#94a3b8'; }
+
+  ctx.clearRect(0,0,W,H);
+  if(phase === 1) drawPhase1(W*0.32, 220, angle);
+  else drawPhase2(W*0.32, 220, angle);
+
+  drawOscilloscope(W*0.06, 400, W*0.88, 110);
+  drawBulb(W*0.85, 220, vAbs);
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Interactive - Nature Électromagnétique et Polarisation de la Lumière</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        h2 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            background: #fafafa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input[type=range] {
+            width: 100%;
+        }
+
+        .info-text {
+            font-size: 0.85rem;
+            color: #555;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Volet 1 : Nature Électromagnétique -->
+        <div class="card">
+            <h2>1. Nature Électromagnétique de la Lumière (Vue 3D interactive)</h2>
+            <p class="info-text">
+                L'onde est constituée de $\vec{E}$ et $\vec{B}$ perpendiculaires entre eux et à la propagation. Utilisez le curseur de rotation 3D pour faire tourner le repère visuel de l'onde dans l'espace.
+            </p>
+            <div class="canvas-container">
+                <canvas id="emWaveCanvas" width="920" height="280"></canvas>
+            </div>
+            <div class="controls">
+                <div class="control-group">
+                    <div class="control-row">
+                        <label for="freqSlider">Fréquence d'oscillation :</label>
+                        <span id="freqValue">2.0</span>
+                    </div>
+                    <input type="range" id="freqSlider" min="0.5" max="5" step="0.1" value="2">
+                </div>
+                <div class="control-group">
+                    <div class="control-row">
+                        <label for="angle3dSlider">Rotation 3D (Angle de vue) :</label>
+                        <span id="angle3dValue">35</span>°
+                    </div>
+                    <input type="range" id="angle3dSlider" min="0" max="90" step="1" value="35">
+                </div>
+            </div>
+        </div>
+
+        <!-- Volet 2 : Polarisation de la Lumière -->
+        <div class="card">
+            <h2>2. Polarisation de la Lumière (Loi de Malus)</h2>
+            <p class="info-text">
+                La lumière non polarisée possède des champs électriques oscillant dans toutes les directions transversales. En traversant un filtre polariseur orienté d'un angle $\theta$, seule la composante alignée avec l'axe du filtre est transmise ($I = I_0 \cos^2(\theta)$).
+            </p>
+            <div class="canvas-container">
+                <canvas id="polarizationCanvas" width="920" height="250"></canvas>
+            </div>
+            <div class="controls">
+                <div class="control-group">
+                    <div class="control-row">
+                        <label for="angleSlider">Angle du Polariseur ($\theta$) :</label>
+                        <span id="angleValue">0</span>°
+                    </div>
+                    <input type="range" id="angleSlider" min="0" max="90" step="1" value="0">
+                </div>
+                <div class="control-group">
+                    <div class="control-row">
+                        <label>Intensité transmise ($I/I_0$) :</label>
+                        <span id="intensityValue">100</span>%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. SIMULATION ONDE ELECTROMAGNETIQUE 3D ---
+        const canvasEM = document.getElementById('emWaveCanvas');
+        const ctxEM = canvasEM.getContext('2d');
+        const freqSlider = document.getElementById('freqSlider');
+        const freqValue = document.getElementById('freqValue');
+        const angle3dSlider = document.getElementById('angle3dSlider');
+        const angle3dValue = document.getElementById('angle3dValue');
+
+        let time = 0;
+
+        function drawEMWave() {
+            ctxEM.clearRect(0, 0, canvasEM.width, canvasEM.height);
+
+            const width = canvasEM.width;
+            const height = canvasEM.height;
+            const centerY = height / 2;
+            const centerX = width / 2;
+
+            const freq = parseFloat(freqSlider.value);
+            freqValue.textContent = freq.toFixed(1);
+
+            const viewAngleDeg = parseFloat(angle3dSlider.value);
+            angle3dValue.textContent = viewAngleDeg;
+            const phi = viewAngleDeg * (Math.PI / 180); // Angle de rotation 3D
+
+            // Axe de propagation (axe X 3D projeté)
+            ctxEM.strokeStyle = '#666';
+            ctxEM.lineWidth = 1.5;
+            ctxEM.beginPath();
+            ctxEM.moveTo(40, centerY + 40 * Math.sin(phi));
+            ctxEM.lineTo(width - 40, centerY - 40 * Math.sin(phi));
+            ctxEM.stroke();
+
+            const wavelength = 120;
+            const amplitude = 55;
+
+            // Fonction de projection 3D isométrique/oblique vers 2D écran
+            function project(x3d, y3d, z3d) {
+                // x3d le long de l'axe de propagation, y3d vertical, z3d en profondeur
+                // Rotation de l'espace autour de l'axe x3d de phi radians
+                let yRot = y3d * Math.cos(phi) - z3d * Math.sin(phi);
+                let zRot = y3d * Math.sin(phi) + z3d * Math.cos(phi);
+
+                // Projection écran (avec légère perspective sur zRot)
+                let screenX = x3d + zRot * 0.4;
+                let screenY = centerY - yRot + zRot * 0.3;
+                return { x: screenX, y: screenY };
+            }
+
+            // Dessin du Champ Électrique E (oscille initialement sur l'axe Y 3D)
+            ctxEM.strokeStyle = '#ff4d4d'; // Rouge
+            ctxEM.lineWidth = 2;
+            ctxEM.beginPath();
+            for (let x = 60; x < width - 60; x += 2) {
+                let k = (2 * Math.PI / wavelength) * (x - 60);
+                let waveVal = amplitude * Math.sin(k - time * freq);
+                let p = project(x, waveVal, 0);
+                if (x === 60) ctxEM.moveTo(p.x, p.y);
+                else ctxEM.lineTo(p.x, p.y);
+            }
+            ctxEM.stroke();
+
+            // Dessin du Champ Magnétique B (oscille initialement sur l'axe Z 3D, perpendiculaire à E)
+            ctxEM.strokeStyle = '#3399ff'; // Bleu
+            ctxEM.lineWidth = 2;
+            ctxEM.beginPath();
+            for (let x = 60; x < width - 60; x += 2) {
+                let k = (2 * Math.PI / wavelength) * (x - 60);
+                let waveVal = amplitude * 0.7 * Math.sin(k - time * freq);
+                let p = project(x, 0, waveVal);
+                if (x === 60) ctxEM.moveTo(p.x, p.y);
+                else ctxEM.lineTo(p.x, p.y);
+            }
+            ctxEM.stroke();
+
+            // Vecteurs instantanés E et B
+            for (let x = 100; x < width - 100; x += 55) {
+                let k = (2 * Math.PI / wavelength) * (x - 60);
+                let eVal = amplitude * Math.sin(k - time * freq);
+                let bVal = amplitude * 0.7 * Math.sin(k - time * freq);
+
+                let origin = project(x, 0, 0);
+                let pE = project(x, eVal, 0);
+                let pB = project(x, 0, bVal);
+
+                // Vecteur E
+                ctxEM.strokeStyle = 'rgba(255, 77, 77, 0.7)';
+                ctxEM.beginPath();
+                ctxEM.moveTo(origin.x, origin.y);
+                ctxEM.lineTo(pE.x, pE.y);
+                ctxEM.stroke();
+
+                // Vecteur B
+                ctxEM.strokeStyle = 'rgba(51, 153, 255, 0.7)';
+                ctxEM.beginPath();
+                ctxEM.moveTo(origin.x, origin.y);
+                ctxEM.lineTo(pB.x, pB.y);
+                ctxEM.stroke();
+            }
+
+            // Légende sur le canvas
+            ctxEM.fillStyle = '#fff';
+            ctxEM.font = '12px Arial';
+            ctxEM.fillText("Direction de propagation (x)", width - 190, 30);
+            ctxEM.fillStyle = '#ff4d4d';
+            ctxEM.fillText("Champ Électrique E", 20, 30);
+            ctxEM.fillStyle = '#3399ff';
+            ctxEM.fillText("Champ Magnétique B", 20, 50);
+
+            time += 0.03;
+            requestAnimationFrame(drawEMWave);
+        }
+
+        drawEMWave();
+
+
+        // --- 2. SIMULATION POLARISATION ---
+        const canvasPol = document.getElementById('polarizationCanvas');
+        const ctxPol = canvasPol.getContext('2d');
+        const angleSlider = document.getElementById('angleSlider');
+        const angleValue = document.getElementById('angleValue');
+        const intensityValue = document.getElementById('intensityValue');
+
+        function drawPolarization() {
+            ctxPol.clearRect(0, 0, canvasPol.width, canvasPol.height);
+
+            const width = canvasPol.width;
+            const height = canvasPol.height;
+            const centerY = height / 2;
+            const thetaDeg = parseFloat(angleSlider.value);
+            const thetaRad = thetaDeg * (Math.PI / 180);
+
+            angleValue.textContent = thetaDeg;
+            const intensity = Math.pow(Math.cos(thetaRad), 2);
+            intensityValue.textContent = (intensity * 100).toFixed(1);
+
+            // 1. Zone lumière non polarisée (gauche)
+            ctxPol.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctxPol.lineWidth = 1.5;
+            for (let yOffset = -40; yOffset <= 40; yOffset += 20) {
+                ctxPol.beginPath();
+                ctxPol.moveTo(100, centerY + yOffset);
+                ctxPol.lineTo(220, centerY + yOffset);
+                ctxPol.stroke();
+            }
+
+            ctxPol.fillStyle = '#ffeb3b';
+            ctxPol.font = '11px Arial';
+            ctxPol.fillText("Lumière non polarisée", 110, 60);
+
+            // 2. Premier Polariseur (Fixe à 0°)
+            ctxPol.fillStyle = 'rgba(100, 150, 255, 0.3)';
+            ctxPol.fillRect(250, 40, 20, 170);
+            ctxPol.strokeStyle = '#6495ed';
+            ctxPol.strokeRect(250, 40, 20, 170);
+            
+            ctxPol.fillStyle = '#fff';
+            ctxPol.fillText("Polariseur 1 (0°)", 220, 230);
+
+            // 3. Lumière polarisée linéairement (milieu)
+            ctxPol.strokeStyle = '#ff4d4d';
+            ctxPol.lineWidth = 2;
+            for (let x = 290; x < 450; x += 30) {
+                ctxPol.beginPath();
+                ctxPol.moveTo(x, centerY - 40);
+                ctxPol.lineTo(x, centerY + 40);
+                ctxPol.stroke();
+            }
+
+            // 4. Analyseur / Second Polariseur (Mobile selon l'angle theta)
+            ctxPol.save();
+            ctxPol.translate(500, centerY);
+            ctxPol.rotate(thetaRad);
+            ctxPol.fillStyle = 'rgba(255, 150, 100, 0.3)';
+            ctxPol.fillRect(-10, -85, 20, 170);
+            ctxPol.strokeStyle = '#ff9800';
+            ctxPol.strokeRect(-10, -85, 20, 170);
+            
+            ctxPol.strokeStyle = '#fff';
+            ctxPol.beginPath();
+            ctxPol.moveTo(0, -75);
+            ctxPol.lineTo(0, 75);
+            ctxPol.stroke();
+            ctxPol.restore();
+
+            ctxPol.fillStyle = '#fff';
+            ctxPol.fillText(`Analyseur (${thetaDeg}°)`, 460, 230);
+
+            // 5. Lumière transmise après l'analyseur
+            let transmittedAmp = 40 * Math.cos(thetaRad);
+            ctxPol.strokeStyle = '#ff4d4d';
+            ctxPol.lineWidth = 2;
+            for (let x = 540; x < 750; x += 30) {
+                ctxPol.beginPath();
+                ctxPol.moveTo(x, centerY - transmittedAmp);
+                ctxPol.lineTo(x, centerY + transmittedAmp);
+                ctxPol.stroke();
+            }
+
+            ctxPol.fillStyle = '#ffeb3b';
+            ctxPol.fillText(`Lumière transmise (I = I₀ cos²θ)`, 560, 60);
+        }
+
+        angleSlider.addEventListener('input', drawPolarization);
+        drawPolarization();
+    </script>
+</body>
+</html>

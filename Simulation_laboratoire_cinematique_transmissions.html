@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratoire Virtuel — Cinématique & Transmissions Mécaniques</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4f1e8;
+    --paper-line:#ded7c2;
+    --ink:#1c2541;
+    --ink-soft:#5b6584;
+    --panel:#fffdf7;
+    --rule:#d9d2bd;
+    --cyan:#22a7a0;
+    --amber:#d98e2c;
+    --coral:#c65b5b;
+    --mint:#2f9e6e;
+    --scope-bg:#0b1220;
+    --scope-grid:#1c2b45;
+    --scope-text:#dfe8f5;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:32px 20px 60px;
+    font-family:'Inter',sans-serif; color:var(--ink);
+    background:
+      linear-gradient(var(--paper-line) 1px, transparent 1px) 0 0/100% 28px,
+      var(--paper);
+    display:flex; flex-direction:column; align-items:center;
+  }
+
+  .masthead{ max-width:1080px; width:100%; margin-bottom:26px; border-bottom:2px solid var(--ink); padding-bottom:14px; }
+  .masthead .kicker{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.04em; color:var(--ink-soft); margin-bottom:6px; }
+  h1{ font-family:'Fraunces',serif; font-weight:600; font-size:2.05rem; margin:0 0 4px; }
+  .subtitle{ color:var(--ink-soft); font-size:1rem; max-width:660px; }
+
+  .container{ max-width:1080px; width:100%; margin-bottom:22px; }
+  .panel{ background:var(--panel); border:1px solid var(--rule); border-radius:6px; padding:24px; }
+
+  h2.panel-title{
+    font-family:'Fraunces',serif; font-weight:600; font-size:1.2rem;
+    margin:0 0 18px; padding-bottom:10px; border-bottom:2px solid var(--rule);
+  }
+  h3.sub-title{ font-family:'Fraunces',serif; font-weight:600; font-size:0.98rem; margin:0 0 10px; color:var(--ink); }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  @media(max-width:768px){ .grid-2{ grid-template-columns:1fr; } }
+
+  .formula-card{ border-left:3px solid var(--cyan); padding:8px 0 8px 14px; margin-bottom:12px; }
+  .formula-card h4{ margin:0 0 4px; font-size:0.82rem; font-weight:600; color:var(--ink-soft); font-family:'Inter',sans-serif; }
+  .formula-render{ font-size:1.02rem; }
+  .formula-desc{ font-size:0.8rem; color:var(--ink-soft); margin-top:3px; }
+
+  .input-group{ display:flex; flex-direction:column; margin-bottom:14px; }
+  .input-group label{ font-size:0.85rem; font-weight:600; color:var(--ink-soft); margin-bottom:6px; display:flex; justify-content:space-between; }
+  .input-group label .val{ font-family:'IBM Plex Mono',monospace; color:var(--ink); background:var(--paper); padding:1px 7px; border-radius:3px; border:1px solid var(--rule); }
+  input[type="number"]{ padding:9px 10px; border-radius:4px; border:1px solid var(--rule); font-size:0.92rem; background:var(--paper); color:var(--ink); font-family:'IBM Plex Mono',monospace; }
+  input[type="range"]{ width:100%; accent-color:var(--cyan); }
+
+  button.action{
+    border:1px solid var(--ink); background:var(--ink); color:var(--panel);
+    padding:9px 14px; border-radius:4px; font-family:'Inter',sans-serif; font-weight:600;
+    font-size:0.86rem; cursor:pointer; width:100%; margin-top:4px; transition:opacity .15s;
+  }
+  button.action:hover{ opacity:0.85; }
+
+  .readout{
+    font-family:'IBM Plex Mono',monospace; font-size:0.85rem; line-height:1.85;
+    background:var(--scope-bg); color:var(--scope-text); border-radius:6px; padding:14px 18px; margin-top:14px;
+  }
+  .readout .rline{ display:flex; justify-content:space-between; gap:14px; }
+  .readout .rlabel{ color:#8fa3c4; }
+  .readout .rval{ font-weight:600; }
+  .readout .rgroup{ margin-top:8px; padding-top:8px; border-top:1px dashed #33456b; }
+  .readout .rgroup:first-child{ margin-top:0; padding-top:0; border-top:none; }
+
+  .canvas-container{ position:relative; background:var(--scope-bg); border-radius:6px; overflow:hidden; margin-top:16px; width:100%; }
+  canvas{ display:block; width:100%; }
+  #kinematicsCanvas{ height:150px; }
+  #gearCanvas, #chainCanvas{ aspect-ratio:900/330; height:auto; }
+</style>
+</head>
+<body>
+
+  <div class="masthead">
+    <div class="kicker">MÉCANIQUE — TRAVAUX PRATIQUES</div>
+    <h1>Laboratoire de cinématique & transmissions mécaniques</h1>
+    <div class="subtitle">Trois dispositifs interactifs : mouvement rectiligne uniformément varié, engrenages en prise directe, transmission par chaîne.</div>
+  </div>
+
+  <!-- SECTION 1 : CINÉMATIQUE -->
+  <div class="container">
+    <div class="panel">
+      <h2 class="panel-title">1 · Cinématique du point (MRUV)</h2>
+      <div class="grid-2">
+        <div>
+          <h3 class="sub-title">Formules clés</h3>
+          <div class="formula-card"><h4>Vitesse instantanée</h4><div class="formula-render" id="fk1"></div></div>
+          <div class="formula-card"><h4>Loi horaire de position</h4><div class="formula-render" id="fk2"></div></div>
+        </div>
+        <div>
+          <h3 class="sub-title">Paramètres</h3>
+          <div class="input-group">
+            <label for="accel">Accélération <span id="katexA"></span> (m/s²)</label>
+            <input type="number" id="accel" value="2" step="0.5">
+          </div>
+          <div class="input-group">
+            <label for="vInit">Vitesse initiale <span id="katexV0"></span> (m/s)</label>
+            <input type="number" id="vInit" value="0" step="1">
+          </div>
+          <div class="input-group">
+            <label for="xInit">Position initiale <span id="katexX0"></span> (m)</label>
+            <input type="number" id="xInit" value="0" step="1">
+          </div>
+          <button class="action" onclick="toggleCinematicSim()">Réinitialiser</button>
+        </div>
+      </div>
+      <div class="readout" id="cinematicStats"></div>
+      <div class="canvas-container">
+        <canvas id="kinematicsCanvas" width="900" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2 : ENGRENAGES DIRECTS -->
+  <div class="container">
+    <div class="panel">
+      <h2 class="panel-title">2 · Dispositif A — engrenages en contact direct</h2>
+      <div class="grid-2">
+        <div>
+          <h3 class="sub-title">Formules & principes</h3>
+          <div class="formula-card"><h4>Rayon primitif</h4><div class="formula-render" id="fg1"></div></div>
+          <div class="formula-card"><h4>Lien vitesse linéaire / angulaire</h4><div class="formula-render" id="fg2"></div>
+            <div class="formula-desc">Deux roues en contact direct tournent en sens opposés.</div>
+          </div>
+        </div>
+        <div>
+          <h3 class="sub-title">Configuration & réglage</h3>
+          <div class="input-group">
+            <label for="z1">Dents roue 1 <span id="katexZ1"></span> <span class="val" id="valZ1">16</span></label>
+            <input type="range" id="z1" min="8" max="40" value="16" oninput="document.getElementById('valZ1').innerText=this.value; updateGears();">
+          </div>
+          <div class="input-group">
+            <label for="z2">Dents roue 2 <span id="katexZ2"></span> <span class="val" id="valZ2">32</span></label>
+            <input type="range" id="z2" min="8" max="50" value="32" oninput="document.getElementById('valZ2').innerText=this.value; updateGears();">
+          </div>
+          <div class="input-group">
+            <label for="n1">Vitesse <span id="katexN1"></span> (tr/min) <span class="val" id="valN1">120</span></label>
+            <input type="range" id="n1" min="20" max="300" step="10" value="120" oninput="document.getElementById('valN1').innerText=this.value; updateGears();">
+          </div>
+        </div>
+      </div>
+      <div class="readout" id="gearResults"></div>
+      <div class="canvas-container">
+        <canvas id="gearCanvas" width="900" height="330"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3 : TRANSMISSION PAR CHAÎNE -->
+  <div class="container">
+    <div class="panel">
+      <h2 class="panel-title">3 · Dispositif B — transmission par chaîne (style bicyclette)</h2>
+      <div class="grid-2">
+        <div>
+          <h3 class="sub-title">Spécificités & formules</h3>
+          <div class="formula-card"><h4>Rayon primitif & vitesse</h4><div class="formula-render" id="fc1"></div>
+            <div class="formula-desc">Contrairement aux engrenages directs, les deux pignons tournent dans le <em>même</em> sens : la chaîne impose une vitesse linéaire commune.</div>
+          </div>
+        </div>
+        <div>
+          <h3 class="sub-title">Configuration du système</h3>
+          <div class="input-group">
+            <label for="bcZ1">Plateau <span id="katexBz1"></span> <span class="val" id="valBcZ1">28</span></label>
+            <input type="range" id="bcZ1" min="14" max="48" value="28" oninput="document.getElementById('valBcZ1').innerText=this.value; updateChain();">
+          </div>
+          <div class="input-group">
+            <label for="bcZ2">Pignon arrière <span id="katexBz2"></span> <span class="val" id="valBcZ2">14</span></label>
+            <input type="range" id="bcZ2" min="10" max="32" value="14" oninput="document.getElementById('valBcZ2').innerText=this.value; updateChain();">
+          </div>
+          <div class="input-group">
+            <label for="bcN1">Cadence <span id="katexBn1"></span> (tr/min) <span class="val" id="valBcN1">60</span></label>
+            <input type="range" id="bcN1" min="20" max="120" step="5" value="60" oninput="document.getElementById('valBcN1').innerText=this.value; updateChain();">
+          </div>
+        </div>
+      </div>
+      <div class="readout" id="chainResults"></div>
+      <div class="canvas-container">
+        <canvas id="chainCanvas" width="900" height="330"></canvas>
+      </div>
+    </div>
+  </div>
+
+<script>
+function katexr(id, tex){ katex.render(tex, document.getElementById(id), {throwOnError:false}); }
+
+katexr('fk1', 'v(t) = v_0 + a \\cdot t');
+katexr('fk2', 'x(t) = \\tfrac{1}{2} a t^2 + v_0 t + x_0');
+katexr('katexA', 'a'); katexr('katexV0', 'v_0'); katexr('katexX0', 'x_0');
+katexr('fg1', 'R = \\dfrac{m \\cdot Z}{2}\\ \\text{(mm)}');
+katexr('fg2', 'v = \\omega \\cdot R');
+katexr('katexZ1', 'Z_1'); katexr('katexZ2', 'Z_2'); katexr('katexN1', 'N_1');
+katexr('fc1', 'R = \\dfrac{m \\cdot Z}{2} \\quad\\vert\\quad v = \\omega_1 R_1 = \\omega_2 R_2');
+katexr('katexBz1', 'Z_1'); katexr('katexBz2', 'Z_2'); katexr('katexBn1', 'N_1');
+
+/* --- 1. CINÉMATIQUE --- */
+const kCanvas = document.getElementById('kinematicsCanvas');
+const kCtx = kCanvas.getContext('2d');
+let t = 0;
+let animationId = null;
+let kScale = 15; // px / m, recalculee a chaque reinitialisation pour s'adapter aux parametres
+
+function estimateScale(a, v0, x0) {
+    // Estime l'amplitude du deplacement sur un horizon de quelques secondes
+    // pour que la trajectoire reste visible quel que soit (a, v0), au lieu
+    // d'un facteur d'echelle fixe qui rendait les petites accelerations
+    // invisibles et les grandes hors-cadre en une fraction de seconde.
+    const horizon = 6; // secondes
+    let maxAbs = Math.abs(x0) + 1;
+    for (let s = 0.5; s <= horizon; s += 0.5) {
+        const x = 0.5 * a * s * s + v0 * s + x0;
+        maxAbs = Math.max(maxAbs, Math.abs(x - x0));
+    }
+    const usablePx = kCanvas.width - 90;
+    return Math.max(4, Math.min(60, usablePx / maxAbs));
+}
+
+function runKinematics() {
+    const a = parseFloat(document.getElementById('accel').value) || 0;
+    const v0 = parseFloat(document.getElementById('vInit').value) || 0;
+    const x0 = parseFloat(document.getElementById('xInit').value) || 0;
+    t += 0.05;
+
+    let xMeters = 0.5 * a * (t ** 2) + v0 * t + x0;
+    let vCurrent = v0 + a * t;
+    const displacement = xMeters - x0;
+
+    const halfRangeM = (kCanvas.width - 90) / (2 * kScale);
+    if (Math.abs(displacement) * kScale > kCanvas.width - 70) {
+        t = 0; xMeters = x0; vCurrent = v0;
+        kScale = estimateScale(a, v0, x0);
+    }
+
+    document.getElementById('cinematicStats').innerHTML = `
+        <div class="rline"><span class="rlabel">Temps t</span><span class="rval">${t.toFixed(2)} s</span></div>
+        <div class="rline"><span class="rlabel">Position x(t)</span><span class="rval">${xMeters.toFixed(2)} m</span></div>
+        <div class="rline"><span class="rlabel">Vitesse v(t)</span><span class="rval">${vCurrent.toFixed(2)} m/s</span></div>`;
+
+    kCtx.clearRect(0, 0, kCanvas.width, kCanvas.height);
+    kCtx.strokeStyle = '#33456b'; kCtx.lineWidth = 2;
+    kCtx.beginPath(); kCtx.moveTo(0, 110); kCtx.lineTo(kCanvas.width, 110); kCtx.stroke();
+
+    kCtx.fillStyle = '#8fa3c4'; kCtx.font = '11px IBM Plex Mono, monospace';
+    const originPx = kCanvas.width / 2;
+    for (let i = 0; i < kCanvas.width; i += 60) {
+        kCtx.fillRect(i, 105, 2, 10);
+        kCtx.fillText((((i - originPx) / kScale)).toFixed(0) + 'm', i - 10, 130);
+    }
+
+    const pixelX = originPx + (displacement * kScale);
+    kCtx.fillStyle = '#22a7a0';
+    kCtx.beginPath(); kCtx.arc(pixelX, 95, 12, 0, Math.PI * 2); kCtx.fill();
+
+    kCtx.strokeStyle = '#d98e2c'; kCtx.lineWidth = 3;
+    const vLen = Math.max(-120, Math.min(120, vCurrent * 3));
+    kCtx.beginPath(); kCtx.moveTo(pixelX, 95); kCtx.lineTo(pixelX + vLen, 95); kCtx.stroke();
+
+    animationId = requestAnimationFrame(runKinematics);
+}
+
+function toggleCinematicSim() {
+    const a = parseFloat(document.getElementById('accel').value) || 0;
+    const v0 = parseFloat(document.getElementById('vInit').value) || 0;
+    const x0 = parseFloat(document.getElementById('xInit').value) || 0;
+    t = 0;
+    kScale = estimateScale(a, v0, x0);
+    cancelAnimationFrame(animationId);
+    runKinematics();
+}
+
+/* --- VARIABLES GLOBALES DE CALCUL --- */
+let gData = { R1: 0, R2: 0, omega1: 0, omega2: 0, vLin1: 0, vLin2: 0, N2: 0 };
+let cData = { R1: 0, R2: 0, omega1: 0, omega2: 0, vLin: 0, N2: 0 };
+
+/* --- 2. ENGRENAGES DIRECTS --- */
+const gCanvas = document.getElementById('gearCanvas');
+const gCtx = gCanvas.getContext('2d');
+let angle1 = 0;
+
+function updateGears() {
+    const Z1 = parseInt(document.getElementById('z1').value);
+    const Z2 = parseInt(document.getElementById('z2').value);
+    const N1 = parseFloat(document.getElementById('n1').value);
+    const m = 2.0;
+
+    const D1 = m * Z1;
+    const D2 = m * Z2;
+    gData.R1 = D1 / 2;
+    gData.R2 = D2 / 2;
+
+    const N2 = N1 * (Z1 / Z2);
+    gData.omega1 = (2 * Math.PI * N1) / 60;
+    gData.omega2 = (2 * Math.PI * N2) / 60;
+    gData.vLin1 = gData.omega1 * (gData.R1 / 1000);
+    gData.vLin2 = gData.omega2 * (gData.R2 / 1000);
+    gData.N2 = N2;
+
+    document.getElementById('gearResults').innerHTML = `
+        <div class="rgroup">
+          <div class="rline"><span class="rlabel">N₂ (fréquence menée)</span><span class="rval">${N2.toFixed(1)} tr/min</span></div>
+          <div class="rline"><span class="rlabel">Rapport k = Z₁/Z₂</span><span class="rval">${(Z1/Z2).toFixed(3)}</span></div>
+        </div>
+        <div class="rgroup">
+          <div class="rline"><span class="rlabel">Roue 1 — R₁ · ω₁ · v₁</span><span class="rval">${gData.R1} mm · ${gData.omega1.toFixed(2)} rad/s · ${gData.vLin1.toFixed(3)} m/s</span></div>
+          <div class="rline"><span class="rlabel">Roue 2 — R₂ · ω₂ · v₂</span><span class="rval">${gData.R2} mm · ${gData.omega2.toFixed(2)} rad/s · ${gData.vLin2.toFixed(3)} m/s</span></div>
+        </div>`;
+}
+
+function drawGearsAnimation() {
+    const Z1 = parseInt(document.getElementById('z1').value);
+    const Z2 = parseInt(document.getElementById('z2').value);
+    const N1 = parseFloat(document.getElementById('n1').value);
+
+    angle1 += (N1 * 0.0008);
+    const angle2 = -angle1 * (Z1 / Z2) + (Math.PI / Z2);
+
+    gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
+
+    const r1 = Z1 * 3.5;
+    const r2 = Z2 * 3.5;
+    const cx1 = 250;
+    const cy1 = 125;
+    const cx2 = cx1 + r1 + r2;
+    const cy2 = 125;
+
+    drawDetailedGear(gCtx, cx1, cy1, r1, Z1, angle1, '#22a7a0', 'Roue 1 (meneuse)', gData.R1, gData.omega1, gData.vLin1);
+    drawDetailedGear(gCtx, cx2, cy2, r2, Z2, angle2, '#c65b5b', 'Roue 2 (menée)', gData.R2, gData.omega2, gData.vLin2);
+
+    requestAnimationFrame(drawGearsAnimation);
+}
+
+function drawDetailedGear(ctx, cx, cy, radius, teeth, angle, color, label, rMm, omega, vLin) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+
+    const toothHeight = 7;
+    const baseRadius = radius - 4;
+
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(0, 0, baseRadius, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#0b1220';
+    ctx.lineWidth = 1.5;
+
+    for (let i = 0; i < teeth; i++) {
+        ctx.save();
+        ctx.rotate((i * 2 * Math.PI) / teeth);
+        ctx.beginPath();
+        const w = (Math.PI * 2) / teeth * 0.35;
+        ctx.moveTo(-radius * Math.sin(w), baseRadius);
+        ctx.lineTo(-radius * Math.sin(w * 0.7), baseRadius + toothHeight);
+        ctx.lineTo(radius * Math.sin(w * 0.7), baseRadius + toothHeight);
+        ctx.lineTo(radius * Math.sin(w), baseRadius);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+    }
+
+    ctx.fillStyle = '#0b1220';
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#dfe8f5';
+    ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = '#dfe8f5';
+    ctx.font = '13px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, cx, cy + radius + 24);
+
+    ctx.fillStyle = '#8fa3c4';
+    ctx.font = '12px IBM Plex Mono, monospace';
+    ctx.fillText(`R = ${rMm} mm`, cx, cy + radius + 41);
+
+    ctx.fillStyle = '#5eead4';
+    ctx.fillText(`ω = ${omega.toFixed(1)} rad/s`, cx, cy + radius + 58);
+    ctx.fillText(`v = ${vLin.toFixed(3)} m/s`, cx, cy + radius + 75);
+}
+
+/* --- 3. TRANSMISSION PAR CHAÎNE --- */
+const cCanvas = document.getElementById('chainCanvas');
+const cCtx = cCanvas.getContext('2d');
+let chainAngle1 = 0;
+
+function updateChain() {
+    const Z1 = parseInt(document.getElementById('bcZ1').value);
+    const Z2 = parseInt(document.getElementById('bcZ2').value);
+    const N1 = parseFloat(document.getElementById('bcN1').value);
+    const m = 2.5;
+
+    const D1 = m * Z1;
+    const D2 = m * Z2;
+    cData.R1 = D1 / 2;
+    cData.R2 = D2 / 2;
+
+    const N2 = N1 * (Z1 / Z2);
+    cData.omega1 = (2 * Math.PI * N1) / 60;
+    cData.omega2 = (2 * Math.PI * N2) / 60;
+    cData.vLin = cData.omega1 * (cData.R1 / 1000);
+    cData.N2 = N2;
+
+    document.getElementById('chainResults').innerHTML = `
+        <div class="rgroup">
+          <div class="rline"><span class="rlabel">N₂ (roue arrière)</span><span class="rval">${N2.toFixed(1)} tr/min</span></div>
+        </div>
+        <div class="rgroup">
+          <div class="rline"><span class="rlabel">Plateau — R₁ · ω₁</span><span class="rval">${cData.R1} mm · ${cData.omega1.toFixed(2)} rad/s</span></div>
+          <div class="rline"><span class="rlabel">Pignon arrière — R₂ · ω₂</span><span class="rval">${cData.R2} mm · ${cData.omega2.toFixed(2)} rad/s</span></div>
+          <div class="rline"><span class="rlabel">Vitesse linéaire de la chaîne</span><span class="rval" style="color:#f0c384;">${cData.vLin.toFixed(3)} m/s</span></div>
+        </div>`;
+}
+
+function drawChainAnimation() {
+    const Z1 = parseInt(document.getElementById('bcZ1').value);
+    const Z2 = parseInt(document.getElementById('bcZ2').value);
+    const N1 = parseFloat(document.getElementById('bcN1').value);
+    const m = 2.5;
+
+    chainAngle1 += (N1 * 0.0008);
+    const chainAngle2 = chainAngle1 * (Z1 / Z2);
+
+    cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+
+    const r1 = (m * Z1) * 1.2;
+    const r2 = (m * Z2) * 1.2;
+    const cx1 = 240;
+    const cy1 = 125;
+    const cx2 = cx1 + 340;
+    const cy2 = 125;
+
+    cCtx.strokeStyle = '#5b6584';
+    cCtx.lineWidth = 4;
+    cCtx.beginPath();
+    cCtx.moveTo(cx1, cy1 - r1);
+    cCtx.lineTo(cx2, cy2 - r2);
+    cCtx.moveTo(cx1, cy1 + r1);
+    cCtx.lineTo(cx2, cy2 + r2);
+    cCtx.stroke();
+
+    cCtx.fillStyle = '#8fa3c4';
+    let shift = (chainAngle1 * 15) % 20;
+    for(let x = cx1 + shift; x < cx2; x += 20) {
+        cCtx.fillRect(x, cy1 - r1 - 3, 10, 6);
+        cCtx.fillRect(x, cy1 + r1 - 3, 10, 6);
+    }
+
+    drawDetailedGear(cCtx, cx1, cy1, r1, Z1, chainAngle1, '#d98e2c', 'Plateau (meneur)', cData.R1, cData.omega1, cData.vLin);
+    drawDetailedGear(cCtx, cx2, cy2, r2, Z2, chainAngle2, '#c65b5b', 'Pignon arrière', cData.R2, cData.omega2, cData.vLin);
+
+    requestAnimationFrame(drawChainAnimation);
+}
+
+window.onload = function() {
+    kScale = estimateScale(parseFloat(document.getElementById('accel').value)||0, parseFloat(document.getElementById('vInit').value)||0, parseFloat(document.getElementById('xInit').value)||0);
+    runKinematics();
+    updateGears();
+    drawGearsAnimation();
+    updateChain();
+    drawChainAnimation();
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Physique Nucléaire - Universitaire</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
+    <style>
+        .active-tab { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: bold; }
+        .legend-icon { width: 12px; height: 12px; display: inline-block; border-radius: 50%; margin-right: 8px; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col">
+
+    <header class="bg-slate-800 border-b border-slate-700 p-4 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wide">Laboratoire Virtuel de Physique Nucléaire</h1>
+            <span class="text-xs bg-blue-600 px-3 py-1 rounded-full uppercase tracking-wider font-semibold">Niveau Universitaire</span>
+        </div>
+    </header>
+
+    <nav class="bg-slate-800/60 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto flex space-x-8 px-4">
+            <button onclick="switchModule('fission')" id="btn-fission" class="py-3 px-2 text-sm uppercase tracking-wider active-tab transition-all">1. Fission (U-235)</button>
+            <button onclick="switchModule('fusion')" id="btn-fusion" class="py-3 px-2 text-sm uppercase tracking-wider text-slate-400 hover:text-slate-200 transition-all">2. Fusion (D-T)</button>
+            <button onclick="switchModule('decay')" id="btn-decay" class="py-3 px-2 text-sm uppercase tracking-wider text-slate-400 hover:text-slate-200 transition-all">3. Désintégration</button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto flex-1 w-full p-6 grid grid-cols-1 xl:grid-cols-4 gap-6">
+        
+        <!-- Zone de Contrôle -->
+        <div class="xl:col-span-1 bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl flex flex-col justify-between">
+            <div>
+                <h2 id="control-title" class="text-lg font-semibold text-blue-400 mb-4 pb-2 border-b border-slate-700">Paramètres</h2>
+                
+                <!-- Contrôles Fission -->
+                <div id="controls-fission" class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Cibles U-235 : <span id="val-nuclei" class="font-bold text-white">50</span></label>
+                        <input type="range" id="slider-nuclei" min="10" max="150" value="50" class="w-full accent-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Barres de contrôle (Absorption) : <span id="val-control" class="font-bold text-white">20</span>%</label>
+                        <input type="range" id="slider-control" min="0" max="90" value="20" class="w-full accent-blue-500">
+                    </div>
+                </div>
+
+                <!-- Contrôles Fusion -->
+                <div id="controls-fusion" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Température ($T$) : <span id="val-temp" class="font-bold text-white">15</span> keV</label>
+                        <input type="range" id="slider-temp" min="1" max="50" value="15" class="w-full accent-red-500">
+                    </div>
+                    <p class="text-xs text-slate-400 italic">Nécessaire pour franchir la barrière coulombienne.</p>
+                </div>
+
+                <!-- Contrôles Désintégration -->
+                <div id="controls-decay" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Demi-vie ($T_{1/2}$) : <span id="val-half" class="font-bold text-white">5</span> s</label>
+                        <input type="range" id="slider-half" min="1" max="20" value="5" class="w-full accent-emerald-500">
+                    </div>
+                    <button onclick="resetDecay()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg transition">Réinitialiser</button>
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="mt-6 bg-slate-900/80 p-4 rounded-lg border border-slate-700">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Analyses</h3>
+                <div id="stats-output" class="text-sm space-y-1 font-mono">
+                    <p>Statut : <span class="text-emerald-400">Actif</span></p>
+                    <p>Énergie : <span id="stat-energy">0.0</span> MeV</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zone de Simulation et Légende -->
+        <div class="xl:col-span-3 bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-xl flex flex-col">
+            <div id="canvas-container" class="w-full flex justify-center items-center flex-grow"></div>
+            
+            <!-- Légende -->
+            <div id="legend-area" class="mt-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700 grid grid-cols-3 gap-2 text-xs text-slate-300"></div>
+
+            <div class="mt-3 flex justify-end">
+                <button onclick="togglePause()" id="btn-pause" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition">Pause / Reprendre</button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let currentModule = 'fission';
+        let isPaused = false;
+        let cumulativeEnergy = 0;
+
+        const COL_NEUTRON = '#ef4444';
+        const COL_URANIUM = '#3b82f6';
+        const COL_FISSION_PROD = '#a855f7'; // Produit de fission (Violet)
+        const COL_DEUTERIUM = '#10b981';
+        const COL_TRITIUM = '#f97316';
+        const COL_HELIUM = '#eab308'; // Produit de fusion (Jaune)
+        const COL_PARENT = '#a855f7';
+        const COL_DAUGHTER = '#64748b'; // Produit de désintégration (Gris ardoise)
+
+        let fUranium = [];
+        let fNeutrons = [];
+        let ions = [];
+        let decayNuclei = [];
+
+        function setup() {
+            let canvas = createCanvas(700, 450);
+            canvas.parent('canvas-container');
+            noStroke();
+            initFission();
+            updateLegend();
+        }
+
+        function draw() {
+            background(15, 23, 42);
+            if (isPaused) return;
+
+            if (currentModule === 'fission') {
+                updateFission();
+                drawFission();
+            } else if (currentModule === 'fusion') {
+                updateFusion();
+                drawFusion();
+            } else if (currentModule === 'decay') {
+                updateDecay();
+                drawDecay();
+            }
+        }
+
+        function updateLegend() {
+            const legendDiv = document.getElementById('legend-area');
+            if (currentModule === 'fission') {
+                legendDiv.innerHTML = `
+                    <div><span class="legend-icon" style="background:${COL_NEUTRON}"></span>Neutron incident</div>
+                    <div><span class="legend-icon" style="background:${COL_URANIUM}"></span>Cible U-235 (Intacte)</div>
+                    <div><span class="legend-icon" style="background:${COL_FISSION_PROD}"></span>Débris de Fission (Produit)</div>
+                `;
+            } else if (currentModule === 'fusion') {
+                legendDiv.innerHTML = `
+                    <div><span class="legend-icon" style="background:${COL_DEUTERIUM}"></span>Deutérium (D)</div>
+                    <div><span class="legend-icon" style="background:${COL_TRITIUM}"></span>Tritium (T)</div>
+                    <div><span class="legend-icon" style="background:${COL_HELIUM}"></span>Hélium-4 (Produit)</div>
+                `;
+            } else if (currentModule === 'decay') {
+                legendDiv.innerHTML = `
+                    <div><span class="legend-icon" style="background:${COL_PARENT}"></span>Noyau Père Radioactif</div>
+                    <div><span class="legend-icon" style="background:${COL_DAUGHTER}"></span>Noyau Fils Stable (Produit)</div>
+                    <div><span class="legend-icon" style="background:white"></span>Rayonnement</div>
+                `;
+            }
+        }
+
+        // FISSION
+        function initFission() {
+            fUranium = [];
+            fNeutrons = [];
+            let count = parseInt(document.getElementById('slider-nuclei').value);
+            for (let i = 0; i < count; i++) {
+                fUranium.push({ x: random(30, width - 30), y: random(30, height - 30), state: 'intact' });
+            }
+            fNeutrons.push({ x: width / 2, y: height / 2, vx: random(-3, 3), vy: random(-3, 3) });
+            cumulativeEnergy = 0;
+        }
+
+        function updateFission() {
+            let controlEff = parseInt(document.getElementById('slider-control').value) / 100.0;
+            for (let n of fNeutrons) {
+                n.x += n.vx;
+                n.y += n.vy;
+                if (n.x < 0 || n.x > width) n.vx *= -1;
+                if (n.y < 0 || n.y > height) n.vy *= -1;
+
+                for (let u of fUranium) {
+                    if (u.state === 'intact' && dist(n.x, n.y, u.x, u.y) < 12) {
+                        if (random() > controlEff) {
+                            u.state = 'fissioned';
+                            cumulativeEnergy += 200;
+                            let nGen = floor(random(2, 4));
+                            for (let k = 0; k < nGen; k++) {
+                                let angle = random(TWO_PI);
+                                fNeutrons.push({ x: u.x, y: u.y, vx: cos(angle) * 3, vy: sin(angle) * 3 });
+                            }
+                        } else {
+                            u.state = 'excited';
+                            setTimeout(() => { if (u.state === 'excited') u.state = 'intact'; }, 100);
+                        }
+                        fNeutrons.splice(fNeutrons.indexOf(n), 1);
+                        break;
+                    }
+                }
+            }
+            if (fNeutrons.length > 150) fNeutrons.splice(0, 20);
+            document.getElementById('stat-energy').innerText = cumulativeEnergy.toLocaleString() + " MeV";
+        }
+
+        function drawFission() {
+            for (let u of fUranium) {
+                if (u.state === 'intact') fill(COL_URANIUM);
+                else if (u.state === 'excited') fill('white');
+                else fill(COL_FISSION_PROD);
+                ellipse(u.x, u.y, 18, 18);
+            }
+            fill(COL_NEUTRON);
+            for (let n of fNeutrons) ellipse(n.x, n.y, 6, 6);
+        }
+
+        // FUSION
+        function initFusion() {
+            ions = [];
+            let count = 50;
+            for (let i = 0; i < count; i++) {
+                ions.push(createIon(i % 2 === 0 ? 'D' : 'T'));
+            }
+            cumulativeEnergy = 0;
+        }
+
+        function createIon(type) {
+            let temp = parseInt(document.getElementById('slider-temp').value);
+            let speed = map(temp, 1, 50, 0.5, 5);
+            let angle = random(TWO_PI);
+            return {
+                x: random(20, width - 20),
+                y: random(20, height - 20),
+                vx: cos(angle) * speed,
+                vy: sin(angle) * speed,
+                type: type,
+                isProduct: false
+            };
+        }
+
+        function updateFusion() {
+            let temp = parseInt(document.getElementById('slider-temp').value);
+            let speedFactor = map(temp, 1, 50, 0.5, 5);
+
+            for (let ion of ions) {
+                ion.x += ion.vx;
+                ion.y += ion.vy;
+                if (ion.x < 10 || ion.x > width - 10) ion.vx *= -1;
+                if (ion.y < 10 || ion.y > height - 10) ion.vy *= -1;
+            }
+
+            for (let i = 0; i < ions.length; i++) {
+                for (let j = i + 1; j < ions.length; j++) {
+                    let p1 = ions[i];
+                    let p2 = ions[j];
+                    if (p1.type !== p2.type && dist(p1.x, p1.y, p2.x, p2.y) < 12) {
+                        let proba = map(temp, 1, 50, 0.02, 0.7);
+                        if (random() < proba) {
+                            cumulativeEnergy += 17.6;
+                            p1.type = 'He';
+                            p1.isProduct = true;
+                            setTimeout(() => {
+                                p1.type = random() > 0.5 ? 'D' : 'T';
+                                p1.isProduct = false;
+                            }, 1500);
+                            p2.x = random(width);
+                            p2.y = random(height);
+                        }
+                    }
+                }
+            }
+            document.getElementById('stat-energy').innerText = cumulativeEnergy.toFixed(1) + " MeV";
+        }
+
+        function drawFusion() {
+            for (let ion of ions) {
+                if (ion.isProduct) fill(COL_HELIUM);
+                else if (ion.type === 'D') fill(COL_DEUTERIUM);
+                else if (ion.type === 'T') fill(COL_TRITIUM);
+                ellipse(ion.x, ion.y, 14, 14);
+            }
+        }
+
+        // DESINTEGRATION
+        function initDecay() {
+            decayNuclei = [];
+            let count = 400;
+            for (let i = 0; i < count; i++) {
+                decayNuclei.push({ x: random(30, width - 30), y: random(30, height - 30), decayed: false });
+            }
+            cumulativeEnergy = 0;
+        }
+
+        function updateDecay() {
+            let halfLife = parseInt(document.getElementById('slider-half').value);
+            let lambda = Math.log(2) / (halfLife * 60);
+
+            if (frameCount % 15 === 0) {
+                for (let n of decayNuclei) {
+                    if (!n.decayed && random() < lambda * 10) {
+                        n.decayed = true;
+                        cumulativeEnergy++;
+                    }
+                }
+            }
+            let restants = decayNuclei.filter(n => !n.decayed).length;
+            document.getElementById('stat-energy').innerText = `${restants} noyaux parents restants`;
+        }
+
+        function drawDecay() {
+            for (let n of decayNuclei) {
+                fill(n.decayed ? COL_DAUGHTER : COL_PARENT);
+                ellipse(n.x, n.y, 8, 8);
+            }
+        }
+
+        function switchModule(name) {
+            currentModule = name;
+            ['fission', 'fusion', 'decay'].forEach(m => {
+                document.getElementById(`btn-${m}`).className = m === name 
+                    ? "py-3 px-2 text-sm uppercase tracking-wider active-tab transition-all" 
+                    : "py-3 px-2 text-sm uppercase tracking-wider text-slate-400 hover:text-slate-200 transition-all";
+                document.getElementById(`controls-${m}`).classList.toggle('hidden', m !== name);
+            });
+            document.getElementById('control-title').innerText = "Paramètres de " + name.charAt(0).toUpperCase() + name.slice(1);
+            if (name === 'fission') initFission();
+            if (name === 'fusion') initFusion();
+            if (name === 'decay') initDecay();
+            updateLegend();
+        }
+
+        function togglePause() { isPaused = !isPaused; }
+        function resetDecay() { initDecay(); }
+
+        document.getElementById('slider-nuclei').addEventListener('input', (e) => {
+            document.getElementById('val-nuclei').innerText = e.target.value;
+            if (currentModule === 'fission') initFission();
+        });
+        document.getElementById('slider-control').addEventListener('input', (e) => {
+            document.getElementById('val-control').innerText = e.target.value;
+        });
+        document.getElementById('slider-temp').addEventListener('input', (e) => {
+            document.getElementById('val-temp').innerText = e.target.value;
+            if (currentModule === 'fusion') initFusion();
+        });
+        document.getElementById('slider-half').addEventListener('input', (e) => {
+            document.getElementById('val-half').innerText = e.target.value;
+        });
+    </script>
+</body>
+</html>
